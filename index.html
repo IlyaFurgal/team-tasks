@@ -885,7 +885,7 @@ async function loadDashboard() {
   const el = document.getElementById('dashboardContent');
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
-  const res = await api('getDashboard');
+  const res = await api('getDashboard', { month });
   if (!res.ok) return;
 
   const { stats } = res;
