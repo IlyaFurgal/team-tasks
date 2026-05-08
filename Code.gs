@@ -3,8 +3,8 @@
 // Google Apps Script
 // ============================================
 
-const SHEET_ID = 'ВСТАВЬ_ID_СВОЕЙ_ТАБЛИЦЫ'; // Заменить на ID твоей Google Sheets
-const ADMIN_PASSWORD = 'admin2024'; // Пароль руководителя — поменяй на свой
+const SHEET_ID = '1TVKt3b_YTLQ0e1OQPconeRF94zP8UFOBeWuhtFAV2f0'; // Заменить на ID твоей Google Sheets
+const ADMIN_PASSWORD = 'R*JIdyV45K3x'; // Пароль руководителя — поменяй на свой
 
 // ---- Названия листов ----
 const SHEETS = {
@@ -135,11 +135,32 @@ function getTasks(data) {
   let tasks = [];
 
   for (let i = 1; i < rows.length; i++) {
-    const [id, employeeId, employeeName, title, deadline, month, status, comment, completedAt] = rows[i];
-    const task = { id, employeeId, employeeName, title, deadline, month, status, comment, completedAt };
+    let [id, employeeId, employeeName, title, deadline, month, status, comment, completedAt] = rows[i];
+    if (!id) continue;
 
-    // Фильтр по сотруднику (для страницы сотрудника)
-    if (data.employeeId && employeeId !== data.employeeId) continue;
+    // Приводим deadline к строке (Sheets может хранить как Date-объект)
+    if (deadline instanceof Date) {
+      deadline = Utilities.formatDate(deadline, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    } else {
+      deadline = String(deadline || '');
+    }
+
+    // Приводим month к строке
+    if (month instanceof Date) {
+      month = Utilities.formatDate(month, Session.getScriptTimeZone(), 'yyyy-MM');
+    } else {
+      month = String(month || '');
+    }
+
+    // completedAt
+    if (completedAt instanceof Date) {
+      completedAt = completedAt.toISOString();
+    }
+
+    const task = { id: String(id), employeeId: String(employeeId), employeeName, title, deadline, month, status, comment: comment || '', completedAt: completedAt || '' };
+
+    // Фильтр по сотруднику
+    if (data.employeeId && String(employeeId) !== String(data.employeeId)) continue;
 
     // Фильтр по месяцу
     if (data.month && month !== data.month) continue;
