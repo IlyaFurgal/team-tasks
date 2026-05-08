@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мои задачи</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #181818;
+    --surface2: #222222;
+    --border: #2a2a2a;
+    --accent: #c9a96e;
+    --text: #f0ece4;
+    --text2: #8a8278;
+    --text3: #5a5550;
+    --done: #4a9e6b;
+    --pending: #4a7ec9;
+    --danger: #c94a4a;
+    --radius: 12px;
+    --font-head: 'Unbounded', sans-serif;
+    --font-body: 'Golos Text', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* ---- LOGIN ---- */
+  #loginScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(ellipse at 50% 30%, #1a1408 0%, #0f0f0f 70%);
+  }
+
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 32px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .login-logo {
+    font-family: var(--font-head);
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+
+  .login-title {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 28px;
+  }
+
+  .input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    padding: 14px 16px;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 12px;
+  }
+
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--text3); }
+
+  .btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0f0f0f;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-head);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:hover { opacity: 0.9; }
+  .btn.secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    margin-top: 8px;
+  }
+  .btn.ghost {
+    background: none;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  .error-msg { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 20px; }
+
+  /* ---- APP ---- */
+  #app { display: none; min-height: 100vh; }
+
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .app-greeting {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .app-object {
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 2px;
+    letter-spacing: 1px;
+  }
+
+  .logout-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  /* ---- TABS ---- */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 61px;
+    z-index: 99;
+  }
+
+  .tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 14px 8px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ---- CONTENT ---- */
+  .content { padding: 20px 16px; }
+
+  /* ---- TASK ITEM ---- */
+  .task-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .task-item.done {
+    opacity: 0.6;
+    border-color: rgba(74,158,107,0.3);
+  }
+
+  .task-item.overdue { border-color: rgba(201,74,74,0.4); }
+
+  .task-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .checkbox {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-top: 1px;
+  }
+
+  .task-item.done .checkbox {
+    background: var(--done);
+    border-color: var(--done);
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .task-body { flex: 1; }
+
+  .task-title {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .task-item.done .task-title {
+    text-decoration: line-through;
+    color: var(--text2);
+  }
+
+  .task-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text2);
+    flex-wrap: wrap;
+  }
+
+  .task-deadline { display: flex; align-items: center; gap: 4px; }
+  .task-deadline.overdue { color: var(--danger); }
+
+  .done-comment {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: rgba(74,158,107,0.08);
+    border-radius: 8px;
+    border-left: 2px solid var(--done);
+    font-size: 13px;
+    color: var(--text2);
+    font-style: italic;
+  }
+
+  /* ---- COMMENT EXPAND ---- */
+  .comment-expand {
+    margin-top: 12px;
+    display: none;
+  }
+
+  .comment-expand.open { display: block; }
+
+  .comment-expand textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 12px;
+    outline: none;
+    resize: none;
+    height: 80px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s;
+  }
+
+  .comment-expand textarea:focus { border-color: var(--accent); }
+  .comment-expand textarea::placeholder { color: var(--text3); }
+
+  .comment-actions { display: flex; gap: 8px; }
+  .comment-actions .btn { flex: 1; padding: 10px; font-size: 11px; }
+
+  /* ---- STATS ---- */
+  .stats-period {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .period-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .period-btn.active {
+    background: var(--surface2);
+    color: var(--accent);
+    border-color: var(--accent2);
+  }
+
+  .big-stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .big-number {
+    font-family: var(--font-head);
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .big-label { font-size: 14px; color: var(--text2); }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--font-head);
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .stat-num.done { color: var(--done); }
+  .stat-num.pending { color: var(--pending); }
+
+  .stat-label { font-size: 12px; color: var(--text2); }
+
+  /* ---- CHECKIN FORM ---- */
+  .checkin-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .checkin-title {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .checkin-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
+
+  .form-label {
+    display: block;
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+
+  textarea.input {
+    resize: none;
+    min-height: 80px;
+    margin-bottom: 0;
+  }
+
+  /* ---- EMPTY ---- */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text2);
+  }
+
+  .empty-icon { font-size: 40px; margin-bottom: 16px; }
+  .empty-title { font-family: var(--font-head); font-size: 15px; margin-bottom: 8px; color: var(--text); }
+  .empty-sub { font-size: 13px; line-height: 1.6; }
+
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text2);
+    font-size: 14px;
+    gap: 10px;
+  }
+
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Княже · Таёжный</div>
+    <div class="login-title">Мои задачи</div>
+    <input type="text" class="input" id="empName" placeholder="Твоё имя">
+    <input type="password" class="input" id="empPass" placeholder="Пароль" onkeydown="if(event.key==='Enter')empLogin()">
+    <button class="btn" onclick="empLogin()">ВОЙТИ</button>
+    <div class="error-msg" id="empLoginError"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header class="app-header">
+    <div>
+      <div class="app-greeting" id="greetingName">Привет!</div>
+      <div class="app-object" id="greetingObject"></div>
+    </div>
+    <button class="logout-btn" onclick="empLogout()">⎋</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('tasks', this)">📋 Задачи</button>
+    <button class="tab" onclick="showTab('stats', this)">📊 Статистика</button>
+    <button class="tab" onclick="showTab('checkin', this)">✍️ Отчёт</button>
+  </div>
+
+  <div class="content">
+    <!-- TASKS TAB -->
+    <div id="tab-tasks">
+      <div id="tasksList">
+        <div class="loading"><div class="spinner"></div> Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- STATS TAB -->
+    <div id="tab-stats" style="display:none">
+      <div class="stats-period">
+        <button class="period-btn active" onclick="showStats('week', this)">Неделя</button>
+        <button class="period-btn" onclick="showStats('month', this)">Месяц</button>
+        <button class="period-btn" onclick="showStats('all', this)">Всё время</button>
+      </div>
+      <div id="statsContent">
+        <div class="loading"><div class="spinner"></div> Загрузка...</div>
+      </div>
+    </div>
+
+    <!-- CHECKIN TAB -->
+    <div id="tab-checkin" style="display:none">
+      <div class="checkin-card">
+        <div class="checkin-title">Еженедельный отчёт</div>
+        <div class="checkin-sub">Заполни перед понедельничной планёркой. Коротко и по делу.</div>
+        <label class="form-label">ЧТО СДЕЛАНО ЗА НЕДЕЛЮ *</label>
+        <textarea class="input" id="ciDone" placeholder="Какие задачи закрыл, что сдвинул..."></textarea>
+        <label class="form-label">ПЛАНЫ НА СЛЕДУЮЩУЮ НЕДЕЛЮ *</label>
+        <textarea class="input" id="ciWillDo" placeholder="Что буду делать, на что фокус..."></textarea>
+        <label class="form-label">ГДЕ НУЖНА ПОДДЕРЖКА</label>
+        <textarea class="input" id="ciNeedHelp" placeholder="Где застрял, что мешает... (необязательно)"></textarea>
+        <button class="btn" style="margin-top:16px" onclick="submitCheckin()">Отправить отчёт</button>
+        <div class="error-msg" id="checkinMsg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbyqi1GoXBQgsoOFQBXRV0-tKuXZnB5UERj650Z9lDvsep0XFmO32u3AIDx3pWyubT9mPg/exec'; // Тот же URL что в index.html
+
+let employee = null;
+let allTasks = [];
+
+// ============================================
+// AUTH
+// ============================================
+async function empLogin() {
+  const name = document.getElementById('empName').value.trim();
+  const pass = document.getElementById('empPass').value;
+  const err = document.getElementById('empLoginError');
+
+  if (!name || !pass) { err.textContent = 'Введи имя и пароль'; return; }
+
+  const res = await api('employeeLogin', { name, password: pass });
+  if (res.ok) {
+    employee = res.employee;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('greetingName').textContent = employee.name;
+    document.getElementById('greetingObject').textContent = employee.object.toUpperCase();
+    loadMyTasks();
+  } else {
+    err.textContent = 'Неверное имя или пароль';
+  }
+}
+
+function empLogout() {
+  employee = null;
+  allTasks = [];
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('empPass').value = '';
+  document.getElementById('empLoginError').textContent = '';
+}
+
+// ============================================
+// TASKS
+// ============================================
+async function loadMyTasks() {
+  const el = document.getElementById('tasksList');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
+
+  const res = await api('getTasks', {
+    employeeId: employee.id,
+    month: new Date().toISOString().substring(0, 7)
+  });
+
+  if (!res.ok) return;
+  allTasks = res.tasks;
+  renderTasks();
+}
+
+function renderTasks() {
+  const el = document.getElementById('tasksList');
+  const now = new Date();
+
+  const pending = allTasks.filter(t => t.status !== 'done');
+  const done = allTasks.filter(t => t.status === 'done');
+
+  if (!allTasks.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">Задач пока нет</div>
+      <div class="empty-sub">Руководитель добавит задачи на месяц</div>
+    </div>`;
+    return;
+  }
+
+  const renderList = (tasks) => tasks.map(t => {
+    const isDone = t.status === 'done';
+    const isOverdue = !isDone && t.deadline && new Date(t.deadline) < now;
+    const dl = t.deadline ? new Date(t.deadline + 'T00:00:00').toLocaleDateString('ru', {day:'numeric', month:'short'}) : '';
+    
+    return `
+    <div class="task-item ${isDone ? 'done' : ''} ${isOverdue ? 'overdue' : ''}" id="task-${t.id}">
+      <div class="task-header" onclick="toggleTask('${t.id}', ${isDone})">
+        <div class="checkbox">${isDone ? '✓' : ''}</div>
+        <div class="task-body">
+          <div class="task-title">${t.title}</div>
+          <div class="task-meta">
+            ${dl ? `<span class="task-deadline ${isOverdue ? 'overdue' : ''}">📅 ${dl}${isOverdue ? ' · просрочено' : ''}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      ${isDone && t.comment ? `<div class="done-comment">💬 ${t.comment}</div>` : ''}
+      ${!isDone ? `
+      <div class="comment-expand" id="expand-${t.id}">
+        <textarea placeholder="Комментарий к результату (необязательно)..." id="comment-${t.id}"></textarea>
+        <div class="comment-actions">
+          <button class="btn ghost" onclick="cancelExpand('${t.id}')">Отмена</button>
+          <button class="btn" onclick="confirmDone('${t.id}')">Выполнено ✓</button>
+        </div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  let html = '';
+  if (pending.length) {
+    html += `<div style="font-size:11px; color:var(--text3); letter-spacing:1.5px; margin-bottom:12px; padding: 0 2px">В РАБОТЕ — ${pending.length}</div>`;
+    html += renderList(pending);
+  }
+  if (done.length) {
+    html += `<div style="font-size:11px; color:var(--text3); letter-spacing:1.5px; margin:20px 0 12px; padding: 0 2px">ВЫПОЛНЕНО — ${done.length}</div>`;
+    html += renderList(done);
+  }
+
+  el.innerHTML = html;
+}
+
+function toggleTask(id, isDone) {
+  if (isDone) return; // Уже выполнено
+  const expand = document.getElementById('expand-' + id);
+  expand.classList.toggle('open');
+  if (expand.classList.contains('open')) {
+    document.getElementById('comment-' + id).focus();
+  }
+}
+
+function cancelExpand(id) {
+  document.getElementById('expand-' + id).classList.remove('open');
+}
+
+async function confirmDone(taskId) {
+  const comment = document.getElementById('comment-' + taskId).value.trim();
+  await api('completeTask', { taskId, comment });
+
+  // Обновляем локально
+  const task = allTasks.find(t => t.id === taskId);
+  if (task) { task.status = 'done'; task.comment = comment; }
+  renderTasks();
+}
+
+// ============================================
+// STATS
+// ============================================
+async function showStats(period, btn) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const res = await api('getTasks', { employeeId: employee.id });
+  if (!res.ok) return;
+
+  const tasks = res.tasks;
+  const now = new Date();
+
+  let filtered;
+  if (period === 'week') {
+    const weekAgo = new Date(now - 7 * 24 * 3600 * 1000);
+    filtered = tasks.filter(t => t.completedAt && new Date(t.completedAt) >= weekAgo);
+  } else if (period === 'month') {
+    const m = now.toISOString().substring(0, 7);
+    filtered = tasks.filter(t => t.month === m);
+  } else {
+    filtered = tasks;
+  }
+
+  const done = filtered.filter(t => t.status === 'done').length;
+  const total = filtered.length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+
+  document.getElementById('statsContent').innerHTML = `
+    <div class="big-stat">
+      <div class="big-number">${done}</div>
+      <div class="big-label">задач выполнено</div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num done">${pct}%</div>
+        <div class="stat-label">выполнено</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num pending">${total - done}</div>
+        <div class="stat-label">в работе</div>
+      </div>
+    </div>`;
+}
+
+// ============================================
+// CHECKIN
+// ============================================
+async function submitCheckin() {
+  const done = document.getElementById('ciDone').value.trim();
+  const willDo = document.getElementById('ciWillDo').value.trim();
+  const needHelp = document.getElementById('ciNeedHelp').value.trim();
+  const msg = document.getElementById('checkinMsg');
+
+  if (!done || !willDo) { msg.textContent = 'Заполни обязательные поля'; return; }
+
+  const weekDate = new Date().toISOString().substring(0, 10);
+  const res = await api('addCheckin', {
+    employeeId: employee.id,
+    employeeName: employee.name,
+    weekDate, done, willDo, needHelp
+  });
+
+  if (res.ok) {
+    msg.style.color = 'var(--done)';
+    msg.textContent = '✓ Отчёт отправлен!';
+    document.getElementById('ciDone').value = '';
+    document.getElementById('ciWillDo').value = '';
+    document.getElementById('ciNeedHelp').value = '';
+    setTimeout(() => { msg.textContent = ''; msg.style.color = ''; }, 3000);
+  } else {
+    msg.textContent = 'Ошибка при отправке';
+  }
+}
+
+// ============================================
+// TABS
+// ============================================
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-tasks').style.display = 'none';
+  document.getElementById('tab-stats').style.display = 'none';
+  document.getElementById('tab-checkin').style.display = 'none';
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).style.display = 'block';
+
+  if (name === 'stats') {
+    showStats('week', document.querySelector('.period-btn'));
+  }
+}
+
+// ============================================
+// API
+// ============================================
+async function api(action, data = {}) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action, ...data })
+  });
+  return res.json();
+}
+</script>
+</body>
+</html>
