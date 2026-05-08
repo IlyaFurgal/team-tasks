@@ -667,6 +667,30 @@
   </div>
 </div>
 
+<!-- MODAL: Редактировать задачу -->
+<div class="modal-overlay" id="modalEditTask">
+  <div class="modal">
+    <div class="modal-title">Редактировать задачу</div>
+    <input type="hidden" id="editTaskId">
+    <div class="form-row">
+      <label class="form-label">Сотрудник</label>
+      <input type="text" class="input" id="editTaskEmployee" disabled style="opacity:0.5">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Задача</label>
+      <input type="text" class="input" id="editTaskTitle" placeholder="Описание задачи">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Срок выполнения</label>
+      <input type="date" class="input" id="editTaskDeadline">
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('modalEditTask')">Отмена</button>
+      <button class="btn" onclick="submitEditTask()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Добавить сотрудника -->
 <div class="modal-overlay" id="modalEmployee">
   <div class="modal">
@@ -699,7 +723,7 @@
 // ============================================
 // CONFIG — замени на свой URL после деплоя
 // ============================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbyqi1GoXBQgsoOFQBXRV0-tKuXZnB5UERj650Z9lDvsep0XFmO32u3AIDx3pWyubT9mPg/exec';
+const API_URL = 'ВСТАВЬ_URL_GOOGLE_APPS_SCRIPT';
 
 // ============================================
 // STATE
@@ -966,6 +990,7 @@ async function loadTasks() {
           <th>СРОК</th>
           <th>СТАТУС</th>
           <th>КОММЕНТАРИЙ</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -973,6 +998,7 @@ async function loadTasks() {
           const badge = t.status === 'done' ? 'done' : t.isOverdue ? 'overdue' : 'pending';
           const label = t.status === 'done' ? 'Выполнено' : t.isOverdue ? 'Просрочено' : 'В работе';
           const dl = t.deadline ? new Date(t.deadline).toLocaleDateString('ru', {day:'numeric', month:'short'}) : '—';
+          const tJson = encodeURIComponent(JSON.stringify({id:t.id, employeeId:t.employeeId, employeeName:t.employeeName, title:t.title, deadline:t.deadline}));
           return `
           <tr>
             <td><strong>${t.employeeName}</strong></td>
@@ -980,6 +1006,10 @@ async function loadTasks() {
             <td style="color:${t.isOverdue ? 'var(--danger)' : 'var(--text2)'}">${dl}</td>
             <td><span class="status-badge ${badge}">${label}</span></td>
             <td><span class="comment-text">${t.comment || '—'}</span></td>
+            <td style="white-space:nowrap">
+              <button class="btn small secondary" style="margin-right:6px" onclick="openEditTaskModal(decodeURIComponent('${tJson}'))">✏️</button>
+              <button class="btn small danger" onclick="deleteTask('${t.id}')">🗑</button>
+            </td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -1082,6 +1112,36 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
     if (e.target === m) closeModal(m.id);
   });
 });
+
+// ============================================
+// EDIT / DELETE TASKS
+// ============================================
+function openEditTaskModal(jsonStr) {
+  const t = JSON.parse(jsonStr);
+  document.getElementById('editTaskId').value = t.id;
+  document.getElementById('editTaskEmployee').value = t.employeeName;
+  document.getElementById('editTaskTitle').value = t.title;
+  document.getElementById('editTaskDeadline').value = t.deadline || '';
+  openModal('modalEditTask');
+}
+
+async function submitEditTask() {
+  const id = document.getElementById('editTaskId').value;
+  const title = document.getElementById('editTaskTitle').value.trim();
+  const deadline = document.getElementById('editTaskDeadline').value;
+  if (!title || !deadline) return alert('Заполни все поля');
+  await api('editTask', { taskId: id, title, deadline });
+  closeModal('modalEditTask');
+  loadTasks();
+  loadDashboard();
+}
+
+async function deleteTask(taskId) {
+  if (!confirm('Удалить задачу?')) return;
+  await api('deleteTask', { taskId });
+  loadTasks();
+  loadDashboard();
+}
 
 // ============================================
 // UTILS
