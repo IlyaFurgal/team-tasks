@@ -138,31 +138,28 @@ function getTasks(data) {
     let [id, employeeId, employeeName, title, deadline, month, status, comment, completedAt] = rows[i];
     if (!id) continue;
 
-    // Приводим deadline к строке (Sheets может хранить как Date-объект)
+    // Приводим deadline к строке
     if (deadline instanceof Date) {
-      deadline = Utilities.formatDate(deadline, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      deadline = Utilities.formatDate(deadline, 'Europe/Moscow', 'yyyy-MM-dd');
     } else {
       deadline = String(deadline || '');
     }
 
-    // Приводим month к строке
-    if (month instanceof Date) {
-      month = Utilities.formatDate(month, Session.getScriptTimeZone(), 'yyyy-MM');
-    } else {
-      month = String(month || '');
-    }
+    // month берём из deadline — так надёжнее
+    month = deadline ? deadline.substring(0, 7) : '';
 
     // completedAt
     if (completedAt instanceof Date) {
       completedAt = completedAt.toISOString();
     }
 
-    const task = { id: String(id), employeeId: String(employeeId), employeeName, title, deadline, month, status, comment: comment || '', completedAt: completedAt || '' };
+    const task = { 
+      id: String(id), employeeId: String(employeeId), 
+      employeeName, title, deadline, month, status, 
+      comment: comment || '', completedAt: completedAt || '' 
+    };
 
-    // Фильтр по сотруднику
     if (data.employeeId && String(employeeId) !== String(data.employeeId)) continue;
-
-    // Фильтр по месяцу
     if (data.month && month !== data.month) continue;
 
     tasks.push(task);
