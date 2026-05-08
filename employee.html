@@ -554,7 +554,8 @@ async function loadMyTasks() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
   const res = await api('getTasks', {
-    employeeId: employee.id
+    employeeId: employee.id,
+    month: new Date().toISOString().substring(0, 7)
   });
 
   if (!res.ok) return;
@@ -562,12 +563,17 @@ async function loadMyTasks() {
   renderTasks();
 }
 
+const PRIORITY_MAP = {
+  critical: { icon: '🔴', label: 'Критически важно', order: 0 },
+  high:     { icon: '🟠', label: 'Важно',            order: 1 },
+  medium:   { icon: '🟡', label: 'Средняя важность', order: 2 },
+  low:      { icon: '🟢', label: 'Малая важность',   order: 3 },
+};
+function pOrder(p) { return (PRIORITY_MAP[p] || PRIORITY_MAP.medium).order; }
+
 function renderTasks() {
   const el = document.getElementById('tasksList');
   const now = new Date();
-
-  const pending = allTasks.filter(t => t.status !== 'done');
-  const done = allTasks.filter(t => t.status === 'done');
 
   if (!allTasks.length) {
     el.innerHTML = `<div class="empty">
@@ -578,11 +584,24 @@ function renderTasks() {
     return;
   }
 
+  // Sort: by deadline asc, then by priority asc
+  const sorted = [...allTasks].sort((a, b) => {
+    if (a.status === 'done' && b.status !== 'done') return 1;
+    if (a.status !== 'done' && b.status === 'done') return -1;
+    const da = a.deadline || '9999', db = b.deadline || '9999';
+    if (da !== db) return da < db ? -1 : 1;
+    return pOrder(a.priority) - pOrder(b.priority);
+  });
+
+  const pending = sorted.filter(t => t.status !== 'done');
+  const done = sorted.filter(t => t.status === 'done');
+
   const renderList = (tasks) => tasks.map(t => {
     const isDone = t.status === 'done';
     const isOverdue = !isDone && t.deadline && new Date(t.deadline) < now;
     const dl = t.deadline ? new Date(t.deadline + 'T00:00:00').toLocaleDateString('ru', {day:'numeric', month:'short'}) : '';
-    
+    const pr = PRIORITY_MAP[t.priority] || PRIORITY_MAP.medium;
+
     return `
     <div class="task-item ${isDone ? 'done' : ''} ${isOverdue ? 'overdue' : ''}" id="task-${t.id}">
       <div class="task-header" onclick="toggleTask('${t.id}', ${isDone})">
@@ -590,7 +609,8 @@ function renderTasks() {
         <div class="task-body">
           <div class="task-title">${t.title}</div>
           <div class="task-meta">
-            ${dl ? `<span class="task-deadline ${isOverdue ? 'overdue' : ''}">📅 ${dl}${isOverdue ? ' · просрочено' : ''}</span>` : ''}
+            <span style="font-size:11px">${pr.icon} ${pr.label}</span>
+            ${dl ? `<span class="task-deadline ${isOverdue ? 'overdue' : ''}">· 📅 ${dl}${isOverdue ? ' · просрочено' : ''}</span>` : ''}
           </div>
         </div>
       </div>
