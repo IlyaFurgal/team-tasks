@@ -1182,13 +1182,7 @@ async function deleteTask(taskId) {
 // ============================================
 // UTILS
 // ============================================
-const PRIORITY_LABELS = {
-  critical: { label: '🔴 Критически', color: '#c94a4a' },
-  high:     { label: '🟠 Важно',       color: '#c97b3a' },
-  medium:   { label: '🟡 Средняя',     color: '#c9a96e' },
-  low:      { label: '🟢 Малая',       color: '#4a9e6b' },
-};
-function priorityOrder(p) { return {critical:0,high:1,medium:2,low:3}[p] ?? 2; }
+
 
 const PRIORITY_LABELS = {
   critical: { label: '🔴 Критически', color: '#c94a4a' },
