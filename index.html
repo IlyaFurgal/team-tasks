@@ -660,6 +660,15 @@
       <label class="form-label">Срок выполнения</label>
       <input type="date" class="input" id="taskDeadline">
     </div>
+    <div class="form-row">
+      <label class="form-label">Приоритет</label>
+      <select class="input" id="taskPriority">
+        <option value="critical">🔴 Критически важно</option>
+        <option value="high">🟠 Важно</option>
+        <option value="medium" selected>🟡 Средней важности</option>
+        <option value="low">🟢 Малой важности</option>
+      </select>
+    </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('modalTask')">Отмена</button>
       <button class="btn" onclick="submitTask()">Добавить</button>
@@ -683,6 +692,15 @@
     <div class="form-row">
       <label class="form-label">Срок выполнения</label>
       <input type="date" class="input" id="editTaskDeadline">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Приоритет</label>
+      <select class="input" id="editTaskPriority">
+        <option value="critical">🔴 Критически важно</option>
+        <option value="high">🟠 Важно</option>
+        <option value="medium">🟡 Средней важности</option>
+        <option value="low">🟢 Малой важности</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('modalEditTask')">Отмена</button>
@@ -885,7 +903,7 @@ async function loadDashboard() {
   const el = document.getElementById('dashboardContent');
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
-  const res = await api('getDashboard', { month });
+  const res = await api('getDashboard');
   if (!res.ok) return;
 
   const { stats } = res;
@@ -980,6 +998,15 @@ async function loadTasks() {
     return;
   }
 
+  // Sort: done first, then by deadline, then by priority
+  tasks.sort((a, b) => {
+    if (a.status === 'done' && b.status !== 'done') return -1;
+    if (a.status !== 'done' && b.status === 'done') return 1;
+    const da = a.deadline || '9999', db = b.deadline || '9999';
+    if (da !== db) return da < db ? -1 : 1;
+    return priorityOrder(a.priority) - priorityOrder(b.priority);
+  });
+
   el.innerHTML = `
     <div class="table-wrap">
     <table>
@@ -987,6 +1014,7 @@ async function loadTasks() {
         <tr>
           <th>СОТРУДНИК</th>
           <th>ЗАДАЧА</th>
+          <th>ПРИОРИТЕТ</th>
           <th>СРОК</th>
           <th>СТАТУС</th>
           <th>КОММЕНТАРИЙ</th>
@@ -998,11 +1026,13 @@ async function loadTasks() {
           const badge = t.status === 'done' ? 'done' : t.isOverdue ? 'overdue' : 'pending';
           const label = t.status === 'done' ? 'Выполнено' : t.isOverdue ? 'Просрочено' : 'В работе';
           const dl = t.deadline ? new Date(t.deadline).toLocaleDateString('ru', {day:'numeric', month:'short'}) : '—';
-          const tJson = encodeURIComponent(JSON.stringify({id:t.id, employeeId:t.employeeId, employeeName:t.employeeName, title:t.title, deadline:t.deadline}));
+          const pr = PRIORITY_LABELS[t.priority] || PRIORITY_LABELS.medium;
+          const tJson = encodeURIComponent(JSON.stringify({id:t.id, employeeId:t.employeeId, employeeName:t.employeeName, title:t.title, deadline:t.deadline, priority:t.priority||'medium'}));
           return `
-          <tr>
+          <tr style="${t.status === 'done' ? 'opacity:0.65' : ''}">
             <td><strong>${t.employeeName}</strong></td>
             <td>${t.title}</td>
+            <td><span style="font-size:12px;color:${pr.color}">${pr.label}</span></td>
             <td style="color:${t.isOverdue ? 'var(--danger)' : 'var(--text2)'}">${dl}</td>
             <td><span class="status-badge ${badge}">${label}</span></td>
             <td><span class="comment-text">${t.comment || '—'}</span></td>
@@ -1027,11 +1057,12 @@ async function submitTask() {
   const empId = document.getElementById('taskEmployee').value;
   const title = document.getElementById('taskTitle').value.trim();
   const deadline = document.getElementById('taskDeadline').value;
+  const priority = document.getElementById('taskPriority').value;
 
   if (!empId || !title || !deadline) return alert('Заполни все поля');
 
   const emp = employees.find(e => e.id === empId);
-  await api('addTask', { employeeId: empId, employeeName: emp.name, title, deadline });
+  await api('addTask', { employeeId: empId, employeeName: emp.name, title, deadline, priority });
 
   closeModal('modalTask');
   loadTasks();
@@ -1122,6 +1153,8 @@ function openEditTaskModal(jsonStr) {
   document.getElementById('editTaskEmployee').value = t.employeeName;
   document.getElementById('editTaskTitle').value = t.title;
   document.getElementById('editTaskDeadline').value = t.deadline || '';
+  const ps = document.getElementById('editTaskPriority');
+  if (ps) ps.value = t.priority || 'medium';
   openModal('modalEditTask');
 }
 
@@ -1129,8 +1162,10 @@ async function submitEditTask() {
   const id = document.getElementById('editTaskId').value;
   const title = document.getElementById('editTaskTitle').value.trim();
   const deadline = document.getElementById('editTaskDeadline').value;
+  const priority = document.getElementById('editTaskPriority').value;
   if (!title || !deadline) return alert('Заполни все поля');
-  await api('editTask', { taskId: id, title, deadline });
+  const res = await api('editTask', { taskId: id, title, deadline, priority });
+  if (!res.ok) { alert('Ошибка: ' + res.error); return; }
   closeModal('modalEditTask');
   loadTasks();
   loadDashboard();
@@ -1138,7 +1173,8 @@ async function submitEditTask() {
 
 async function deleteTask(taskId) {
   if (!confirm('Удалить задачу?')) return;
-  await api('deleteTask', { taskId });
+  const res = await api('deleteTask', { taskId });
+  if (!res.ok) { alert('Ошибка удаления: ' + res.error); return; }
   loadTasks();
   loadDashboard();
 }
@@ -1146,6 +1182,22 @@ async function deleteTask(taskId) {
 // ============================================
 // UTILS
 // ============================================
+const PRIORITY_LABELS = {
+  critical: { label: '🔴 Критически', color: '#c94a4a' },
+  high:     { label: '🟠 Важно',       color: '#c97b3a' },
+  medium:   { label: '🟡 Средняя',     color: '#c9a96e' },
+  low:      { label: '🟢 Малая',       color: '#4a9e6b' },
+};
+function priorityOrder(p) { return {critical:0,high:1,medium:2,low:3}[p] ?? 2; }
+
+const PRIORITY_LABELS = {
+  critical: { label: '🔴 Критически', color: '#c94a4a' },
+  high:     { label: '🟠 Важно',       color: '#c97b3a' },
+  medium:   { label: '🟡 Средняя',     color: '#c9a96e' },
+  low:      { label: '🟢 Малая',       color: '#4a9e6b' },
+};
+function priorityOrder(p) { return {critical:0,high:1,medium:2,low:3}[p] ?? 2; }
+
 function emptyState(icon, title, sub) {
   return `<div class="empty">
     <div class="empty-icon">${icon}</div>
