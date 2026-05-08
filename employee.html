@@ -554,8 +554,7 @@ async function loadMyTasks() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
   const res = await api('getTasks', {
-    employeeId: employee.id,
-    month: new Date().toISOString().substring(0, 7)
+    employeeId: employee.id
   });
 
   if (!res.ok) return;
