@@ -810,7 +810,7 @@ async function analyzeWithClaude() {
   if (!strategy) return alert('Сначала добавь стратегию развития');
 
   const month = document.getElementById('analyzeMonth').value || new Date().toISOString().substring(0,7);
-  const tasks = await sb('GET','tasks',null,`?month=eq.${month}&order=employee_name.asc`);
+  const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
 
   if (!tasks.length) return alert('Нет задач за выбранный месяц');
 
