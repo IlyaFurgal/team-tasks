@@ -6,443 +6,113 @@
 <title>Мои задачи</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0f0f0f;
-    --surface: #181818;
-    --surface2: #222222;
-    --border: #2a2a2a;
-    --accent: #c9a96e;
-    --text: #f0ece4;
-    --text2: #8a8278;
-    --text3: #5a5550;
-    --done: #4a9e6b;
-    --pending: #4a7ec9;
-    --danger: #c94a4a;
-    --radius: 12px;
-    --font-head: 'Unbounded', sans-serif;
-    --font-body: 'Golos Text', sans-serif;
-  }
+:root {
+  --bg:#0f0f0f; --surface:#181818; --surface2:#222222; --border:#2a2a2a;
+  --accent:#c9a96e; --text:#f0ece4; --text2:#8a8278; --text3:#5a5550;
+  --done:#4a9e6b; --pending:#4a7ec9; --danger:#c94a4a;
+  --radius:12px; --font-head:'Unbounded',sans-serif; --font-body:'Golos Text',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;max-width:480px;margin:0 auto}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 30%,#1a1408 0%,#0f0f0f 70%)}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px 32px;width:100%;text-align:center}
+.login-logo{font-family:var(--font-head);font-size:10px;letter-spacing:4px;color:var(--accent);text-transform:uppercase;margin-bottom:28px}
+.login-title{font-family:var(--font-head);font-size:20px;font-weight:600;margin-bottom:28px}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-body);
-    min-height: 100vh;
-    max-width: 480px;
-    margin: 0 auto;
-  }
+.input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-body);font-size:15px;padding:14px 16px;outline:none;transition:border-color .2s;margin-bottom:12px}
+.input:focus{border-color:var(--accent)}
+.input::placeholder{color:var(--text3)}
+textarea.input{resize:none;min-height:80px;margin-bottom:0}
 
-  /* ---- LOGIN ---- */
-  #loginScreen {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: radial-gradient(ellipse at 50% 30%, #1a1408 0%, #0f0f0f 70%);
-  }
+.btn{width:100%;background:var(--accent);color:#0f0f0f;border:none;border-radius:var(--radius);font-family:var(--font-head);font-size:12px;font-weight:600;letter-spacing:1px;padding:14px;cursor:pointer;transition:opacity .2s;-webkit-tap-highlight-color:transparent}
+.btn:hover{opacity:.9}
+.btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);margin-top:8px}
+.btn.ghost{background:none;color:var(--text2);border:1px solid var(--border);font-size:13px;padding:10px}
+.btn.small-btn{width:auto;padding:8px 16px;font-size:11px}
 
-  .login-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 40px 32px;
-    width: 100%;
-    text-align: center;
-  }
+.error-msg{color:var(--danger);font-size:13px;margin-top:10px;min-height:20px}
+#app{display:none;min-height:100vh}
 
-  .login-logo {
-    font-family: var(--font-head);
-    font-size: 10px;
-    letter-spacing: 4px;
-    color: var(--accent);
-    text-transform: uppercase;
-    margin-bottom: 28px;
-  }
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.app-greeting{font-family:var(--font-head);font-size:13px;font-weight:600}
+.app-object{font-size:11px;color:var(--accent);margin-top:2px;letter-spacing:1px}
+.logout-btn{background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:4px}
 
-  .login-title {
-    font-family: var(--font-head);
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 28px;
-  }
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:61px;z-index:99}
+.tab{flex:1;background:none;border:none;color:var(--text2);font-family:var(--font-body);font-size:13px;padding:14px 8px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 
-  .input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text);
-    font-family: var(--font-body);
-    font-size: 15px;
-    padding: 14px 16px;
-    outline: none;
-    transition: border-color 0.2s;
-    margin-bottom: 12px;
-  }
+.content{padding:20px 16px}
 
-  .input:focus { border-color: var(--accent); }
-  .input::placeholder { color: var(--text3); }
+/* Tasks */
+.task-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;transition:border-color .2s}
+.task-item.done{opacity:.6;border-color:rgba(74,158,107,.3)}
+.task-item.overdue{border-color:rgba(201,74,74,.4)}
+.task-header{display:flex;align-items:flex-start;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.checkbox{width:24px;height:24px;border:2px solid var(--border);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-top:1px}
+.task-item.done .checkbox{background:var(--done);border-color:var(--done);color:#fff;font-size:14px}
+.task-body{flex:1}
+.task-title{font-size:15px;font-weight:500;line-height:1.4;margin-bottom:4px}
+.task-item.done .task-title{text-decoration:line-through;color:var(--text2)}
+.task-meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);flex-wrap:wrap}
+.task-deadline.overdue{color:var(--danger)}
+.task-notes{font-size:12px;color:var(--text2);margin-top:6px;font-style:italic}
 
-  .btn {
-    width: 100%;
-    background: var(--accent);
-    color: #0f0f0f;
-    border: none;
-    border-radius: var(--radius);
-    font-family: var(--font-head);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    padding: 14px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-    -webkit-tap-highlight-color: transparent;
-  }
+.done-comment{margin-top:12px;padding:10px 12px;background:rgba(74,158,107,.08);border-radius:8px;border-left:2px solid var(--done);font-size:13px;color:var(--text2);font-style:italic}
 
-  .btn:hover { opacity: 0.9; }
-  .btn.secondary {
-    background: var(--surface2);
-    color: var(--text);
-    border: 1px solid var(--border);
-    margin-top: 8px;
-  }
-  .btn.ghost {
-    background: none;
-    color: var(--text2);
-    border: 1px solid var(--border);
-    font-size: 13px;
-    padding: 10px;
-  }
+/* Comments thread in task */
+.task-comments{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
+.task-comment-item{margin-bottom:8px;padding:8px 10px;background:var(--surface2);border-radius:8px;font-size:13px}
+.task-comment-item.admin{border-left:2px solid var(--accent)}
+.task-comment-item.employee{border-left:2px solid var(--pending)}
+.comment-who{font-size:11px;color:var(--text3);margin-bottom:3px}
 
-  .error-msg { color: var(--danger); font-size: 13px; margin-top: 10px; min-height: 20px; }
+/* Complete expand */
+.complete-expand{margin-top:12px;display:none}
+.complete-expand.open{display:block}
+.complete-expand textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-body);font-size:14px;padding:12px;outline:none;resize:none;height:80px;margin-bottom:10px;transition:border-color .2s}
+.complete-expand textarea:focus{border-color:var(--accent)}
+.complete-expand textarea::placeholder{color:var(--text3)}
+.complete-actions{display:flex;gap:8px}
+.complete-actions .btn{flex:1;padding:10px;font-size:11px}
 
-  /* ---- APP ---- */
-  #app { display: none; min-height: 100vh; }
+/* Add comment in task */
+.add-note-row{display:flex;gap:8px;margin-top:8px}
+.add-note-row input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;outline:none}
+.add-note-row input:focus{border-color:var(--accent)}
 
-  .app-header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+/* Self-task form */
+.self-task-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px}
+.self-task-title{font-family:var(--font-head);font-size:12px;margin-bottom:12px;color:var(--accent)}
 
-  .app-greeting {
-    font-family: var(--font-head);
-    font-size: 13px;
-    font-weight: 600;
-  }
+/* Stats */
+.stats-period{display:flex;gap:8px;margin-bottom:20px}
+.period-btn{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-family:var(--font-body);font-size:13px;padding:10px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.period-btn.active{background:var(--surface2);color:var(--accent);border-color:#8b6914}
+.big-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;margin-bottom:16px}
+.big-number{font-family:var(--font-head);font-size:56px;font-weight:700;color:var(--accent);line-height:1;margin-bottom:8px}
+.big-label{font-size:14px;color:var(--text2)}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.stat-num{font-family:var(--font-head);font-size:28px;font-weight:600;margin-bottom:4px}
+.stat-num.done-color{color:var(--done)}
+.stat-num.pending-color{color:var(--pending)}
+.stat-label{font-size:12px;color:var(--text2)}
 
-  .app-object {
-    font-size: 11px;
-    color: var(--accent);
-    margin-top: 2px;
-    letter-spacing: 1px;
-  }
+/* Checkin */
+.checkin-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.checkin-title{font-family:var(--font-head);font-size:13px;font-weight:600;margin-bottom:4px}
+.checkin-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5}
+.form-label{display:block;font-size:11px;color:var(--text2);letter-spacing:.5px;margin-bottom:6px;margin-top:14px}
 
-  .logout-btn {
-    background: none;
-    border: none;
-    color: var(--text3);
-    font-size: 22px;
-    cursor: pointer;
-    padding: 4px;
-  }
-
-  /* ---- TABS ---- */
-  .tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    position: sticky;
-    top: 61px;
-    z-index: 99;
-  }
-
-  .tab {
-    flex: 1;
-    background: none;
-    border: none;
-    color: var(--text2);
-    font-family: var(--font-body);
-    font-size: 13px;
-    padding: 14px 8px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-  }
-
-  /* ---- CONTENT ---- */
-  .content { padding: 20px 16px; }
-
-  /* ---- TASK ITEM ---- */
-  .task-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 12px;
-    transition: border-color 0.2s;
-  }
-
-  .task-item.done {
-    opacity: 0.6;
-    border-color: rgba(74,158,107,0.3);
-  }
-
-  .task-item.overdue { border-color: rgba(201,74,74,0.4); }
-
-  .task-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .checkbox {
-    width: 24px;
-    height: 24px;
-    border: 2px solid var(--border);
-    border-radius: 6px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    margin-top: 1px;
-  }
-
-  .task-item.done .checkbox {
-    background: var(--done);
-    border-color: var(--done);
-    color: #fff;
-    font-size: 14px;
-  }
-
-  .task-body { flex: 1; }
-
-  .task-title {
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1.4;
-    margin-bottom: 4px;
-  }
-
-  .task-item.done .task-title {
-    text-decoration: line-through;
-    color: var(--text2);
-  }
-
-  .task-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: var(--text2);
-    flex-wrap: wrap;
-  }
-
-  .task-deadline { display: flex; align-items: center; gap: 4px; }
-  .task-deadline.overdue { color: var(--danger); }
-
-  .done-comment {
-    margin-top: 12px;
-    padding: 10px 12px;
-    background: rgba(74,158,107,0.08);
-    border-radius: 8px;
-    border-left: 2px solid var(--done);
-    font-size: 13px;
-    color: var(--text2);
-    font-style: italic;
-  }
-
-  /* ---- COMMENT EXPAND ---- */
-  .comment-expand {
-    margin-top: 12px;
-    display: none;
-  }
-
-  .comment-expand.open { display: block; }
-
-  .comment-expand textarea {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: var(--font-body);
-    font-size: 14px;
-    padding: 12px;
-    outline: none;
-    resize: none;
-    height: 80px;
-    margin-bottom: 10px;
-    transition: border-color 0.2s;
-  }
-
-  .comment-expand textarea:focus { border-color: var(--accent); }
-  .comment-expand textarea::placeholder { color: var(--text3); }
-
-  .comment-actions { display: flex; gap: 8px; }
-  .comment-actions .btn { flex: 1; padding: 10px; font-size: 11px; }
-
-  /* ---- STATS ---- */
-  .stats-period {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-
-  .period-btn {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text2);
-    font-family: var(--font-body);
-    font-size: 13px;
-    padding: 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .period-btn.active {
-    background: var(--surface2);
-    color: var(--accent);
-    border-color: var(--accent2);
-  }
-
-  .big-stat {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    text-align: center;
-    margin-bottom: 16px;
-  }
-
-  .big-number {
-    font-family: var(--font-head);
-    font-size: 56px;
-    font-weight: 700;
-    color: var(--accent);
-    line-height: 1;
-    margin-bottom: 8px;
-  }
-
-  .big-label { font-size: 14px; color: var(--text2); }
-
-  .stats-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    text-align: center;
-  }
-
-  .stat-num {
-    font-family: var(--font-head);
-    font-size: 28px;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .stat-num.done { color: var(--done); }
-  .stat-num.pending { color: var(--pending); }
-
-  .stat-label { font-size: 12px; color: var(--text2); }
-
-  /* ---- CHECKIN FORM ---- */
-  .checkin-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 16px;
-  }
-
-  .checkin-title {
-    font-family: var(--font-head);
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .checkin-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
-
-  .form-label {
-    display: block;
-    font-size: 11px;
-    color: var(--text2);
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-    margin-top: 14px;
-  }
-
-  textarea.input {
-    resize: none;
-    min-height: 80px;
-    margin-bottom: 0;
-  }
-
-  /* ---- EMPTY ---- */
-  .empty {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text2);
-  }
-
-  .empty-icon { font-size: 40px; margin-bottom: 16px; }
-  .empty-title { font-family: var(--font-head); font-size: 15px; margin-bottom: 8px; color: var(--text); }
-  .empty-sub { font-size: 13px; line-height: 1.6; }
-
-  .loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-    color: var(--text2);
-    font-size: 14px;
-    gap: 10px;
-  }
-
-  .spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--text2);font-size:14px;gap:10px}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">Княже · Таёжный</div>
@@ -454,7 +124,6 @@
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <header class="app-header">
     <div>
@@ -465,32 +134,38 @@
   </header>
 
   <div class="tabs">
-    <button class="tab active" onclick="showTab('tasks', this)">📋 Задачи</button>
-    <button class="tab" onclick="showTab('stats', this)">📊 Статистика</button>
-    <button class="tab" onclick="showTab('checkin', this)">✍️ Отчёт</button>
+    <button class="tab active" onclick="showTab('tasks',this)">📋 Задачи</button>
+    <button class="tab" onclick="showTab('stats',this)">📊 Статистика</button>
+    <button class="tab" onclick="showTab('checkin',this)">✍️ Отчёт</button>
   </div>
 
   <div class="content">
-    <!-- TASKS TAB -->
     <div id="tab-tasks">
-      <div id="tasksList">
-        <div class="loading"><div class="spinner"></div> Загрузка...</div>
+      <!-- Self-task form -->
+      <div class="self-task-form">
+        <div class="self-task-title">+ ДОБАВИТЬ СВОЮ ЗАДАЧУ</div>
+        <input type="text" class="input" id="selfTaskTitle" placeholder="Название задачи" style="margin-bottom:8px">
+        <input type="date" class="input" id="selfTaskDeadline" style="margin-bottom:8px">
+        <select class="input" id="selfTaskPriority" style="margin-bottom:8px">
+          <option value="critical">🔴 Критически важно</option>
+          <option value="high">🟠 Важно</option>
+          <option value="medium" selected>🟡 Средней важности</option>
+          <option value="low">🟢 Малой важности</option>
+        </select>
+        <button class="btn" onclick="addSelfTask()">Добавить задачу</button>
       </div>
+      <div id="tasksList"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
     </div>
 
-    <!-- STATS TAB -->
     <div id="tab-stats" style="display:none">
       <div class="stats-period">
-        <button class="period-btn active" onclick="showStats('week', this)">Неделя</button>
-        <button class="period-btn" onclick="showStats('month', this)">Месяц</button>
-        <button class="period-btn" onclick="showStats('all', this)">Всё время</button>
+        <button class="period-btn active" onclick="showStats('week',this)">Неделя</button>
+        <button class="period-btn" onclick="showStats('month',this)">Месяц</button>
+        <button class="period-btn" onclick="showStats('all',this)">Всё время</button>
       </div>
-      <div id="statsContent">
-        <div class="loading"><div class="spinner"></div> Загрузка...</div>
-      </div>
+      <div id="statsContent"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
     </div>
 
-    <!-- CHECKIN TAB -->
     <div id="tab-checkin" style="display:none">
       <div class="checkin-card">
         <div class="checkin-title">Еженедельный отчёт</div>
@@ -509,115 +184,127 @@
 </div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbyqi1GoXBQgsoOFQBXRV0-tKuXZnB5UERj650Z9lDvsep0XFmO32u3AIDx3pWyubT9mPg/exec'; // Тот же URL что в index.html
+const SUPABASE_URL = 'https://nztphhcluregncwuzadt.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56dHBoaGNsdXJlZ25jd3V6YWR0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODU0MTEwMSwiZXhwIjoyMDk0MTE3MTAxfQ.H8FoRqc1U-IqNJBDJjqdXzV6-V5t3lt96GbJt9GIRbc';
+
+const PRIORITY_MAP = {
+  critical:{ icon:'🔴', label:'Критически важно', order:0 },
+  high:    { icon:'🟠', label:'Важно',            order:1 },
+  medium:  { icon:'🟡', label:'Средняя важность', order:2 },
+  low:     { icon:'🟢', label:'Малая важность',   order:3 },
+};
 
 let employee = null;
 let allTasks = [];
 
-// ============================================
-// AUTH
-// ============================================
+async function sb(method, table, body=null, query='') {
+  const url = `${SUPABASE_URL}/rest/v1/${table}${query}`;
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method==='POST' ? 'return=representation' : 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (method==='DELETE'||method==='PATCH') return { ok:true };
+  return res.json();
+}
+
 async function empLogin() {
   const name = document.getElementById('empName').value.trim();
   const pass = document.getElementById('empPass').value;
   const err = document.getElementById('empLoginError');
+  if (!name||!pass) { err.textContent='Введи имя и пароль'; return; }
 
-  if (!name || !pass) { err.textContent = 'Введи имя и пароль'; return; }
+  const data = await sb('GET','employees',null,`?name=eq.${encodeURIComponent(name)}&active=eq.true`);
+  if (!data.length) { err.textContent='Неверное имя или пароль'; return; }
+  const emp = data[0];
+  if (String(emp.password) !== String(pass)) { err.textContent='Неверное имя или пароль'; return; }
 
-  const res = await api('employeeLogin', { name, password: pass });
-  if (res.ok) {
-    employee = res.employee;
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('greetingName').textContent = employee.name;
-    document.getElementById('greetingObject').textContent = employee.object.toUpperCase();
-    loadMyTasks();
-  } else {
-    err.textContent = 'Неверное имя или пароль';
-  }
+  employee = emp;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('greetingName').textContent = emp.name;
+  document.getElementById('greetingObject').textContent = emp.object.toUpperCase();
+  loadMyTasks();
 }
 
 function empLogout() {
-  employee = null;
-  allTasks = [];
+  employee = null; allTasks = [];
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('empPass').value = '';
   document.getElementById('empLoginError').textContent = '';
 }
 
-// ============================================
-// TASKS
-// ============================================
 async function loadMyTasks() {
   const el = document.getElementById('tasksList');
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
-
-  const res = await api('getTasks', {
-    employeeId: employee.id
-  });
-
-  if (!res.ok) return;
-  allTasks = res.tasks;
+  allTasks = await sb('GET','tasks',null,`?employee_id=eq.${employee.id}&order=deadline.asc`);
   renderTasks();
 }
-
-const PRIORITY_MAP = {
-  critical: { icon: '🔴', label: 'Критически важно', order: 0 },
-  high:     { icon: '🟠', label: 'Важно',            order: 1 },
-  medium:   { icon: '🟡', label: 'Средняя важность', order: 2 },
-  low:      { icon: '🟢', label: 'Малая важность',   order: 3 },
-};
-function pOrder(p) { return (PRIORITY_MAP[p] || PRIORITY_MAP.medium).order; }
 
 function renderTasks() {
   const el = document.getElementById('tasksList');
   const now = new Date();
 
   if (!allTasks.length) {
-    el.innerHTML = `<div class="empty">
-      <div class="empty-icon">📋</div>
-      <div class="empty-title">Задач пока нет</div>
-      <div class="empty-sub">Руководитель добавит задачи на месяц</div>
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2)">
+      <div style="font-size:36px;margin-bottom:12px">📋</div>
+      <div style="font-family:var(--font-head);font-size:14px;margin-bottom:6px;color:var(--text)">Задач пока нет</div>
+      <div style="font-size:13px">Руководитель добавит задачи или добавь сам</div>
     </div>`;
     return;
   }
 
-  // Sort: by deadline asc, then by priority asc
-  const sorted = [...allTasks].sort((a, b) => {
-    if (a.status === 'done' && b.status !== 'done') return 1;
-    if (a.status !== 'done' && b.status === 'done') return -1;
-    const da = a.deadline || '9999', db = b.deadline || '9999';
-    if (da !== db) return da < db ? -1 : 1;
-    return pOrder(a.priority) - pOrder(b.priority);
+  const sorted = [...allTasks].sort((a,b) => {
+    if (a.status==='done' && b.status!=='done') return 1;
+    if (a.status!=='done' && b.status==='done') return -1;
+    const da=a.deadline||'9999', db=b.deadline||'9999';
+    if (da!==db) return da<db?-1:1;
+    return (PRIORITY_MAP[a.priority]?.order??2)-(PRIORITY_MAP[b.priority]?.order??2);
   });
 
-  const pending = sorted.filter(t => t.status !== 'done');
-  const done = sorted.filter(t => t.status === 'done');
+  const pending = sorted.filter(t => t.status!=='done');
+  const done = sorted.filter(t => t.status==='done');
 
-  const renderList = (tasks) => tasks.map(t => {
-    const isDone = t.status === 'done';
-    const isOverdue = !isDone && t.deadline && new Date(t.deadline) < now;
-    const dl = t.deadline ? new Date(t.deadline + 'T00:00:00').toLocaleDateString('ru', {day:'numeric', month:'short'}) : '';
+  const renderList = tasks => tasks.map(t => {
+    const isDone = t.status==='done';
+    const isOverdue = !isDone && t.deadline && new Date(t.deadline)<now;
+    const dl = t.deadline ? new Date(t.deadline+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}) : '';
     const pr = PRIORITY_MAP[t.priority] || PRIORITY_MAP.medium;
 
-    return `
-    <div class="task-item ${isDone ? 'done' : ''} ${isOverdue ? 'overdue' : ''}" id="task-${t.id}">
-      <div class="task-header" onclick="toggleTask('${t.id}', ${isDone})">
-        <div class="checkbox">${isDone ? '✓' : ''}</div>
+    return `<div class="task-item ${isDone?'done':''} ${isOverdue?'overdue':''}" id="task-${t.id}">
+      <div class="task-header" onclick="toggleComplete('${t.id}',${isDone})">
+        <div class="checkbox">${isDone?'✓':''}</div>
         <div class="task-body">
           <div class="task-title">${t.title}</div>
           <div class="task-meta">
-            <span style="font-size:11px">${pr.icon} ${pr.label}</span>
-            ${dl ? `<span class="task-deadline ${isOverdue ? 'overdue' : ''}">· 📅 ${dl}${isOverdue ? ' · просрочено' : ''}</span>` : ''}
+            <span>${pr.icon} ${pr.label}</span>
+            ${dl ? `<span class="task-deadline ${isOverdue?'overdue':''}">· 📅 ${dl}${isOverdue?' · просрочено':''}</span>` : ''}
+            ${t.created_by==='employee' ? '<span style="color:var(--accent);font-size:11px">· моя задача</span>' : ''}
           </div>
+          ${t.notes ? `<div class="task-notes">${t.notes}</div>` : ''}
         </div>
       </div>
       ${isDone && t.comment ? `<div class="done-comment">💬 ${t.comment}</div>` : ''}
-      ${!isDone ? `
-      <div class="comment-expand" id="expand-${t.id}">
+
+      <!-- Comments thread -->
+      <div class="task-comments" id="comments-${t.id}" style="display:none"></div>
+
+      <!-- Add note button -->
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn ghost" style="flex:1;padding:8px;font-size:12px" onclick="toggleComments('${t.id}')">💬 Комментарий</button>
+      </div>
+
+      <!-- Complete expand -->
+      ${!isDone ? `<div class="complete-expand" id="expand-${t.id}">
         <textarea placeholder="Комментарий к результату (необязательно)..." id="comment-${t.id}"></textarea>
-        <div class="comment-actions">
+        <div class="complete-actions">
           <button class="btn ghost" onclick="cancelExpand('${t.id}')">Отмена</button>
           <button class="btn" onclick="confirmDone('${t.id}')">Выполнено ✓</button>
         </div>
@@ -627,140 +314,147 @@ function renderTasks() {
 
   let html = '';
   if (pending.length) {
-    html += `<div style="font-size:11px; color:var(--text3); letter-spacing:1.5px; margin-bottom:12px; padding: 0 2px">В РАБОТЕ — ${pending.length}</div>`;
+    html += `<div style="font-size:11px;color:var(--text3);letter-spacing:1.5px;margin-bottom:12px">В РАБОТЕ — ${pending.length}</div>`;
     html += renderList(pending);
   }
   if (done.length) {
-    html += `<div style="font-size:11px; color:var(--text3); letter-spacing:1.5px; margin:20px 0 12px; padding: 0 2px">ВЫПОЛНЕНО — ${done.length}</div>`;
+    html += `<div style="font-size:11px;color:var(--text3);letter-spacing:1.5px;margin:20px 0 12px">ВЫПОЛНЕНО — ${done.length}</div>`;
     html += renderList(done);
   }
-
   el.innerHTML = html;
 }
 
-function toggleTask(id, isDone) {
-  if (isDone) return; // Уже выполнено
-  const expand = document.getElementById('expand-' + id);
-  expand.classList.toggle('open');
-  if (expand.classList.contains('open')) {
-    document.getElementById('comment-' + id).focus();
-  }
+function toggleComplete(id, isDone) {
+  if (isDone) return;
+  const expand = document.getElementById('expand-'+id);
+  if (expand) expand.classList.toggle('open');
 }
 
 function cancelExpand(id) {
-  document.getElementById('expand-' + id).classList.remove('open');
+  document.getElementById('expand-'+id).classList.remove('open');
 }
 
 async function confirmDone(taskId) {
-  const comment = document.getElementById('comment-' + taskId).value.trim();
-  await api('completeTask', { taskId, comment });
-
-  // Обновляем локально
-  const task = allTasks.find(t => t.id === taskId);
-  if (task) { task.status = 'done'; task.comment = comment; }
+  const comment = document.getElementById('comment-'+taskId).value.trim();
+  await sb('PATCH','tasks',{ status:'done', comment, completed_at:new Date().toISOString() },`?id=eq.${taskId}`);
+  const task = allTasks.find(t => t.id===taskId);
+  if (task) { task.status='done'; task.comment=comment; }
   renderTasks();
 }
 
-// ============================================
-// STATS
-// ============================================
-async function showStats(period, btn) {
-  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-
-  const res = await api('getTasks', { employeeId: employee.id });
-  if (!res.ok) return;
-
-  const tasks = res.tasks;
-  const now = new Date();
-
-  let filtered;
-  if (period === 'week') {
-    const weekAgo = new Date(now - 7 * 24 * 3600 * 1000);
-    filtered = tasks.filter(t => t.completedAt && new Date(t.completedAt) >= weekAgo);
-  } else if (period === 'month') {
-    const m = now.toISOString().substring(0, 7);
-    filtered = tasks.filter(t => t.month === m);
+// Comments
+async function toggleComments(taskId) {
+  const el = document.getElementById('comments-'+taskId);
+  if (el.style.display==='none') {
+    el.style.display = 'block';
+    const comments = await sb('GET','task_comments',null,`?task_id=eq.${taskId}&order=created_at.asc`);
+    if (!comments.length) {
+      el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:8px 0">Нет комментариев</div>
+        <div class="add-note-row">
+          <input type="text" id="noteInput-${taskId}" placeholder="Написать комментарий...">
+          <button class="btn small-btn" onclick="submitNote('${taskId}')">→</button>
+        </div>`;
+    } else {
+      el.innerHTML = comments.map(c => `
+        <div class="task-comment-item ${c.author_role}">
+          <div class="comment-who">${c.author}</div>
+          <div>${c.text}</div>
+        </div>`).join('') +
+        `<div class="add-note-row">
+          <input type="text" id="noteInput-${taskId}" placeholder="Написать комментарий...">
+          <button class="btn small-btn" onclick="submitNote('${taskId}')">→</button>
+        </div>`;
+    }
   } else {
-    filtered = tasks;
+    el.style.display = 'none';
   }
+}
 
-  const done = filtered.filter(t => t.status === 'done').length;
-  const total = filtered.length;
-  const pct = total ? Math.round(done / total * 100) : 0;
-
-  document.getElementById('statsContent').innerHTML = `
-    <div class="big-stat">
-      <div class="big-number">${done}</div>
-      <div class="big-label">задач выполнено</div>
-    </div>
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-num done">${pct}%</div>
-        <div class="stat-label">выполнено</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num pending">${total - done}</div>
-        <div class="stat-label">в работе</div>
-      </div>
+async function submitNote(taskId) {
+  const input = document.getElementById('noteInput-'+taskId);
+  const text = input.value.trim();
+  if (!text) return;
+  await sb('POST','task_comments',{ id:'cmt_'+Date.now(), task_id:taskId, author:employee.name, author_role:'employee', text });
+  input.value = '';
+  // Refresh comments
+  const comments = await sb('GET','task_comments',null,`?task_id=eq.${taskId}&order=created_at.asc`);
+  const el = document.getElementById('comments-'+taskId);
+  el.innerHTML = comments.map(c => `
+    <div class="task-comment-item ${c.author_role}">
+      <div class="comment-who">${c.author}</div>
+      <div>${c.text}</div>
+    </div>`).join('') +
+    `<div class="add-note-row">
+      <input type="text" id="noteInput-${taskId}" placeholder="Написать комментарий...">
+      <button class="btn small-btn" onclick="submitNote('${taskId}')">→</button>
     </div>`;
 }
 
-// ============================================
-// CHECKIN
-// ============================================
+// Self-task
+async function addSelfTask() {
+  const title = document.getElementById('selfTaskTitle').value.trim();
+  const deadline = document.getElementById('selfTaskDeadline').value;
+  const priority = document.getElementById('selfTaskPriority').value;
+  if (!title || !deadline) return alert('Введи название и срок');
+  const month = deadline.substring(0,7);
+  await sb('POST','tasks',{ id:'task_'+Date.now(), employee_id:employee.id, employee_name:employee.name, title, deadline, priority, month, status:'pending', created_by:'employee' });
+  document.getElementById('selfTaskTitle').value = '';
+  document.getElementById('selfTaskDeadline').value = '';
+  loadMyTasks();
+}
+
+// Stats
+async function showStats(period, btn) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const tasks = await sb('GET','tasks',null,`?employee_id=eq.${employee.id}`);
+  const now = new Date();
+  let filtered;
+  if (period==='week') {
+    const weekAgo = new Date(now-7*24*3600*1000);
+    filtered = tasks.filter(t => t.completed_at && new Date(t.completed_at)>=weekAgo);
+  } else if (period==='month') {
+    const m = now.toISOString().substring(0,7);
+    filtered = tasks.filter(t => t.month===m);
+  } else {
+    filtered = tasks;
+  }
+  const done = filtered.filter(t => t.status==='done').length;
+  const total = filtered.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('statsContent').innerHTML = `
+    <div class="big-stat"><div class="big-number">${done}</div><div class="big-label">задач выполнено</div></div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num done-color">${pct}%</div><div class="stat-label">выполнено</div></div>
+      <div class="stat-card"><div class="stat-num pending-color">${total-done}</div><div class="stat-label">в работе</div></div>
+    </div>`;
+}
+
+// Checkin
 async function submitCheckin() {
   const done = document.getElementById('ciDone').value.trim();
   const willDo = document.getElementById('ciWillDo').value.trim();
   const needHelp = document.getElementById('ciNeedHelp').value.trim();
   const msg = document.getElementById('checkinMsg');
-
-  if (!done || !willDo) { msg.textContent = 'Заполни обязательные поля'; return; }
-
-  const weekDate = new Date().toISOString().substring(0, 10);
-  const res = await api('addCheckin', {
-    employeeId: employee.id,
-    employeeName: employee.name,
-    weekDate, done, willDo, needHelp
-  });
-
-  if (res.ok) {
-    msg.style.color = 'var(--done)';
-    msg.textContent = '✓ Отчёт отправлен!';
-    document.getElementById('ciDone').value = '';
-    document.getElementById('ciWillDo').value = '';
-    document.getElementById('ciNeedHelp').value = '';
-    setTimeout(() => { msg.textContent = ''; msg.style.color = ''; }, 3000);
-  } else {
-    msg.textContent = 'Ошибка при отправке';
-  }
+  if (!done||!willDo) { msg.textContent='Заполни обязательные поля'; return; }
+  await sb('POST','checkins',{ id:'ci_'+Date.now(), employee_id:employee.id, employee_name:employee.name, week_date:new Date().toISOString().substring(0,10), done, will_do:willDo, need_help:needHelp });
+  msg.style.color='var(--done)';
+  msg.textContent='✓ Отчёт отправлен!';
+  document.getElementById('ciDone').value='';
+  document.getElementById('ciWillDo').value='';
+  document.getElementById('ciNeedHelp').value='';
+  setTimeout(()=>{msg.textContent='';msg.style.color='';},3000);
 }
 
-// ============================================
-// TABS
-// ============================================
+// Tabs
 function showTab(name, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-tasks').style.display = 'none';
-  document.getElementById('tab-stats').style.display = 'none';
-  document.getElementById('tab-checkin').style.display = 'none';
+  document.getElementById('tab-tasks').style.display='none';
+  document.getElementById('tab-stats').style.display='none';
+  document.getElementById('tab-checkin').style.display='none';
   btn.classList.add('active');
-  document.getElementById('tab-' + name).style.display = 'block';
-
-  if (name === 'stats') {
-    showStats('week', document.querySelector('.period-btn'));
-  }
-}
-
-// ============================================
-// API
-// ============================================
-async function api(action, data = {}) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify({ action, ...data })
-  });
-  return res.json();
+  document.getElementById('tab-'+name).style.display='block';
+  if (name==='stats') showStats('week', document.querySelector('.period-btn'));
 }
 </script>
 </body>
