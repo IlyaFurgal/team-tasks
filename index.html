@@ -905,8 +905,7 @@ async function generateReport() {
     lines.push('');
     lines.push('===========================================');
 
-    const reportText = lines.join('
-');
+    const reportText = lines.join('\n');
     document.getElementById('reportText').textContent = reportText;
     document.getElementById('reportPreview').style.display = 'block';
   } catch(e) {
