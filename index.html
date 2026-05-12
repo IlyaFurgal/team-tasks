@@ -828,7 +828,8 @@ async function generateReport() {
 
   try {
     // Get all tasks in range
-    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
+    const allTasksRaw = await sb('GET', 'tasks', null, `?order=employee_name.asc,deadline.asc`);
+    const tasks = allTasksRaw.filter(t => t.month >= from && t.month <= to);
     const checkins = await sb('GET','checkins',null,`?created_at=gte.${from}-01&order=employee_name.asc,created_at.desc`);
     const now = new Date();
 
