@@ -235,47 +235,53 @@ tr:hover td{background:var(--surface2)}
       <div id="employeesContent"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
     </div>
 
-    <!-- STRATEGY -->
+    <!-- STRATEGY / EXPORT -->
     <div class="section" id="section-strategy">
-      <div class="section-title">Стратегия и AI-анализ</div>
+      <div class="section-title">Аналитика и экспорт</div>
 
-      <!-- Загрузка стратегии -->
+      <!-- Экспорт отчёта -->
       <div class="strategy-box">
-        <div class="form-label" style="margin-bottom:10px">СТРАТЕГИЯ РАЗВИТИЯ</div>
-        <div id="fileUploadArea" style="border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:12px" onclick="document.getElementById('strategyFile').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleFileDrop(event)">
-          <div style="font-size:32px;margin-bottom:8px">📄</div>
-          <div style="font-size:14px;color:var(--text2);margin-bottom:4px">Перетащи файл или нажми для выбора</div>
-          <div style="font-size:12px;color:var(--text3)">PDF, Word (.docx), TXT</div>
-          <input type="file" id="strategyFile" accept=".txt,.pdf,.docx" style="display:none" onchange="handleFileSelect(event)">
+        <div class="form-label" style="margin-bottom:10px">ЭКСПОРТ ОТЧЁТА</div>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:20px">Выгрузи статистику по команде за выбранный период в виде текстового отчёта — и загрузи его в Claude для анализа</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:20px">
+          <div>
+            <div class="form-label">ОТ</div>
+            <input type="month" class="month-input" id="exportFrom">
+          </div>
+          <div>
+            <div class="form-label">ДО</div>
+            <input type="month" class="month-input" id="exportTo">
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px">
+            <button class="btn small" onclick="generateReport()">📊 Сформировать отчёт</button>
+          </div>
         </div>
-        <div id="fileStatus" style="font-size:13px;color:var(--text2);margin-bottom:12px;display:none"></div>
-        <textarea class="input" id="strategyText" placeholder="Или вставь текст стратегии вручную..." style="min-height:160px"></textarea>
-        <div style="display:flex;gap:10px;margin-top:12px">
-          <button class="btn small" onclick="saveStrategy()">💾 Сохранить стратегию</button>
-          <button class="btn small secondary" onclick="clearStrategy()">Очистить</button>
+        <div id="reportLoading" style="display:none" class="loading"><div class="spinner"></div> Собираю данные...</div>
+        <div id="reportPreview" style="display:none">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;max-height:400px;overflow-y:auto">
+            <pre id="reportText" style="font-family:var(--font-body);font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text)"></pre>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn small" onclick="downloadReport()">⬇️ Скачать TXT</button>
+            <button class="btn small secondary" onclick="copyReport()">📋 Копировать</button>
+          </div>
+          <div id="copyMsg" style="font-size:13px;color:var(--done);margin-top:8px;min-height:20px"></div>
         </div>
-        <div id="strategySaveMsg" style="font-size:13px;margin-top:8px;min-height:20px"></div>
       </div>
 
-      <!-- AI анализ -->
-      <div class="strategy-box">
-        <div class="form-label" style="margin-bottom:10px">AI-АНАЛИЗ ЗАДАЧ</div>
-        <p style="font-size:14px;color:var(--text2);margin-bottom:16px">Claude проверит задачи выбранного месяца и оценит соответствие стратегии, затем можно обсудить результаты в диалоге</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <button class="btn small" onclick="analyzeWithClaude()" id="analyzeBtn">🤖 Запустить анализ</button>
-          <select class="select" id="analyzeMonth"><option value="">Текущий месяц</option></select>
-        </div>
-        <div id="aiLoading" style="display:none" class="loading"><div class="spinner"></div> Claude анализирует задачи...</div>
-        <div id="aiResult" style="display:none" class="ai-result"></div>
-      </div>
-
-      <!-- Диалог с Claude -->
-      <div class="strategy-box" id="aiChatBox" style="display:none">
-        <div class="form-label" style="margin-bottom:10px">ДИАЛОГ С CLAUDE</div>
-        <div id="aiChatMessages" style="max-height:400px;overflow-y:auto;margin-bottom:16px;display:flex;flex-direction:column;gap:12px"></div>
-        <div style="display:flex;gap:10px">
-          <input type="text" class="input" id="aiChatInput" placeholder="Задай вопрос по анализу..." style="margin-bottom:0;flex:1" onkeydown="if(event.key==='Enter')sendChatMessage()">
-          <button class="btn small" onclick="sendChatMessage()">→</button>
+      <!-- Подсказка для анализа -->
+      <div class="strategy-box" style="border-color:var(--accent2)">
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="font-size:32px">🤖</div>
+          <div>
+            <div style="font-family:var(--font-head);font-size:13px;font-weight:600;margin-bottom:8px;color:var(--accent)">КАК СДЕЛАТЬ AI-АНАЛИЗ</div>
+            <div style="font-size:14px;color:var(--text2);line-height:1.7">
+              1. Сформируй и скачай отчёт выше<br>
+              2. Открой <strong style="color:var(--text)">claude.ai</strong> или любой AI-чат<br>
+              3. Загрузи файл отчёта и напиши:<br>
+              <div style="margin-top:8px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-style:italic;color:var(--text);font-size:13px">"Проанализируй выполнение задач моей команды. Вот наша стратегия развития: [вставь стратегию]. Оцени соответствие задач стратегии и дай рекомендации на следующий месяц."</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -372,8 +378,8 @@ tr:hover td{background:var(--surface2)}
 const SUPABASE_URL = 'https://nztphhcluregncwuzadt.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56dHBoaGNsdXJlZ25jd3V6YWR0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODU0MTEwMSwiZXhwIjoyMDk0MTE3MTAxfQ.H8FoRqc1U-IqNJBDJjqdXzV6-V5t3lt96GbJt9GIRbc';
 const ADMIN_PASSWORD = '1983';
-const GEMINI_KEY = 'AIzaSyDQh1zmOdpQ8buj_25TS1jyPbMPIL7WbpQ';
-const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_KEY = 'AIzaSyA8Hr5yRAQjOxwgUUs1c8vXQbz1p5rueoc';
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 const PRIORITY = {
   critical:{ label:'🔴 Критически', color:'#c94a4a', order:0 },
@@ -436,23 +442,16 @@ async function init() {
   document.getElementById('dashMonth').value = m;
   document.getElementById('filterMonth').value = m;
 
-  // Populate analyze month options
-  const sel = document.getElementById('analyzeMonth');
-  for (let i = 0; i < 6; i++) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    const val = d.toISOString().substring(0,7);
-    const opt = document.createElement('option');
-    opt.value = val;
-    opt.textContent = d.toLocaleDateString('ru',{month:'long',year:'numeric'});
-    sel.appendChild(opt);
-  }
+  // Set default export range
+  const exportFrom = document.getElementById('exportFrom');
+  const exportTo = document.getElementById('exportTo');
+  if (exportFrom) exportFrom.value = m;
+  if (exportTo) exportTo.value = m;
 
   await loadEmployees();
   loadDashboard();
   loadTasks();
   loadCheckins();
-  loadStrategy();
 }
 
 // ============================================
@@ -547,7 +546,7 @@ async function loadDashboard() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
   try {
-    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
+    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}&active_employee=neq.false`);
     const now = new Date();
 
     const stats = employees.map(emp => {
@@ -817,211 +816,124 @@ async function loadCheckins() {
 }
 
 // ============================================
-// STRATEGY + CLAUDE ANALYSIS
+// EXPORT REPORT
 // ============================================
-async function loadStrategy() {
-  const data = await sb('GET','strategy',null,'?id=eq.1');
-  if (data.length) document.getElementById('strategyText').value = data[0].content || '';
-}
+async function generateReport() {
+  const from = document.getElementById('exportFrom').value;
+  const to = document.getElementById('exportTo').value;
+  if (!from || !to) return alert('Выбери период');
 
-async function saveStrategy() {
-  const content = document.getElementById('strategyText').value.trim();
-  const existing = await sb('GET','strategy',null,'?id=eq.1');
-  if (existing.length) {
-    await sb('PATCH','strategy',{ content, updated_at: new Date().toISOString() },'?id=eq.1');
-  } else {
-    await sb('POST','strategy',{ id:1, content });
-  }
-  alert('Стратегия сохранена');
-}
-
-// ============================================
-// FILE UPLOAD
-// ============================================
-async function handleFileSelect(event) {
-  const file = event.target.files[0];
-  if (file) await processStrategyFile(file);
-}
-
-function handleFileDrop(event) {
-  event.preventDefault();
-  document.getElementById('fileUploadArea').style.borderColor = 'var(--border)';
-  const file = event.dataTransfer.files[0];
-  if (file) processStrategyFile(file);
-}
-
-async function processStrategyFile(file) {
-  const status = document.getElementById('fileStatus');
-  status.style.display = 'block';
-  status.style.color = 'var(--text2)';
-  status.textContent = `⏳ Читаю файл: ${file.name}...`;
+  document.getElementById('reportLoading').style.display = 'flex';
+  document.getElementById('reportPreview').style.display = 'none';
 
   try {
-    let text = '';
-    if (file.name.endsWith('.txt')) {
-      text = await file.text();
-    } else if (file.name.endsWith('.pdf')) {
-      // Read PDF as base64 and extract text via simple approach
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      // Simple PDF text extraction - find text between BT/ET markers
-      const str = new TextDecoder('latin1').decode(bytes);
-      const matches = str.match(/\(([^)]{2,500})\)/g) || [];
-      text = matches.map(m => m.slice(1,-1)).filter(s => /[а-яёА-ЯЁa-zA-Z]{3,}/.test(s)).join(' ');
-      if (text.length < 100) {
-        status.style.color = 'var(--warn)';
-        status.textContent = '⚠️ PDF извлечён частично. Рекомендую использовать TXT или вставить текст вручную.';
-      }
-    } else if (file.name.endsWith('.docx')) {
-      // DOCX is a ZIP - extract document.xml
-      const JSZip = await loadJSZip();
-      if (JSZip) {
-        const zip = await JSZip.loadAsync(file);
-        const xmlFile = zip.files['word/document.xml'];
-        if (xmlFile) {
-          const xml = await xmlFile.async('text');
-          text = xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    // Get all tasks in range
+    const tasks = await sb('GET','tasks',null,`?month=gte.${from}&month=lte.${to}&order=employee_name.asc,deadline.asc`);
+    const checkins = await sb('GET','checkins',null,`?created_at=gte.${from}-01&order=employee_name.asc,created_at.desc`);
+    const now = new Date();
+
+    // Build report text
+    const lines = [];
+    lines.push('===========================================');
+    lines.push('  ОТЧЁТ ПО КОМАНДЕ');
+    lines.push(`  Период: ${from} — ${to}`);
+    lines.push(`  Сформирован: ${now.toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'})}`);
+    lines.push('===========================================');
+    lines.push('');
+
+    // Summary
+    const done = tasks.filter(t => t.status === 'done').length;
+    const total = tasks.length;
+    const overdue = tasks.filter(t => t.status !== 'done' && t.deadline && new Date(t.deadline) < now).length;
+    lines.push('ОБЩАЯ СТАТИСТИКА');
+    lines.push('-------------------------------------------');
+    lines.push(`Всего задач:      ${total}`);
+    lines.push(`Выполнено:        ${done} (${total ? Math.round(done/total*100) : 0}%)`);
+    lines.push(`В работе:         ${total - done - overdue}`);
+    lines.push(`Просрочено:       ${overdue}`);
+    lines.push('');
+
+    // By employee
+    lines.push('ПО СОТРУДНИКАМ');
+    lines.push('-------------------------------------------');
+    for (const emp of employees) {
+      const empTasks = tasks.filter(t => t.employee_id === emp.id);
+      if (!empTasks.length) continue;
+      const empDone = empTasks.filter(t => t.status === 'done').length;
+      const empOverdue = empTasks.filter(t => t.status !== 'done' && t.deadline && new Date(t.deadline) < now).length;
+      const pct = empTasks.length ? Math.round(empDone/empTasks.length*100) : 0;
+      lines.push('');
+      lines.push(`> ${emp.name} (${emp.object})`);
+      lines.push(`  Задач: ${empTasks.length} | Выполнено: ${empDone} (${pct}%) | Просрочено: ${empOverdue}`);
+      lines.push('');
+
+      // Group by month
+      const months = [...new Set(empTasks.map(t => t.month))].sort();
+      for (const month of months) {
+        const monthTasks = empTasks.filter(t => t.month === month);
+        lines.push(`  ${month}:`);
+        for (const t of monthTasks) {
+          const statusIcon = t.status === 'done' ? '✓' : new Date(t.deadline) < now && t.status !== 'done' ? '!' : '○';
+          const pr = {critical:'🔴',high:'🟠',medium:'🟡',low:'🟢'}[t.priority] || '🟡';
+          const dl = t.deadline ? new Date(t.deadline+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}) : '';
+          const commentPart = t.comment ? ' | Итог: ' + t.comment : '';
+          lines.push(`  [${statusIcon}] ${pr} ${t.title}${dl ? ' - ' + dl : ''}${commentPart}`);
         }
-      } else {
-        throw new Error('Для .docx нужна библиотека. Используй TXT.');
       }
     }
 
-    if (text.length > 50) {
-      document.getElementById('strategyText').value = text.substring(0, 20000);
-      status.style.color = 'var(--done)';
-      status.textContent = `✅ Файл загружен: ${file.name} (${Math.round(text.length/1000)}к символов)`;
-    } else {
-      throw new Error('Не удалось извлечь текст из файла');
+    // Checkins summary
+    if (checkins.length) {
+      lines.push('');
+      lines.push('');
+      lines.push('ЕЖЕНЕДЕЛЬНЫЕ ОТЧЁТЫ');
+      lines.push('-------------------------------------------');
+      // Last checkin per employee
+      const lastCheckins = {};
+      for (const c of checkins) {
+        if (!lastCheckins[c.employee_id]) lastCheckins[c.employee_id] = c;
+      }
+      for (const c of Object.values(lastCheckins)) {
+        lines.push('');
+        lines.push(`> ${c.employee_name} (последний отчёт ${new Date(c.created_at).toLocaleDateString('ru',{day:'numeric',month:'short'})})`);
+        lines.push(`  Сделано: ${c.done}`);
+        lines.push(`  Планы:   ${c.will_do}`);
+        if (c.need_help) lines.push(`  Помощь:  ${c.need_help}`);
+      }
     }
+
+    lines.push('');
+    lines.push('===========================================');
+
+    const reportText = lines.join('
+');
+    document.getElementById('reportText').textContent = reportText;
+    document.getElementById('reportPreview').style.display = 'block';
   } catch(e) {
-    status.style.color = 'var(--danger)';
-    status.textContent = `❌ Ошибка: ${e.message}. Попробуй TXT или вставь текст вручную.`;
+    alert('Ошибка: ' + e.message);
   }
+
+  document.getElementById('reportLoading').style.display = 'none';
 }
 
-async function loadJSZip() {
-  if (window.JSZip) return window.JSZip;
-  return new Promise(resolve => {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-    s.onload = () => resolve(window.JSZip);
-    s.onerror = () => resolve(null);
-    document.head.appendChild(s);
+function downloadReport() {
+  const text = document.getElementById('reportText').textContent;
+  const from = document.getElementById('exportFrom').value;
+  const to = document.getElementById('exportTo').value;
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `отчёт_команды_${from}_${to}.txt`;
+  a.click();
+}
+
+function copyReport() {
+  const text = document.getElementById('reportText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const msg = document.getElementById('copyMsg');
+    msg.textContent = '✓ Скопировано в буфер обмена';
+    setTimeout(() => msg.textContent = '', 2500);
   });
-}
-
-function clearStrategy() {
-  document.getElementById('strategyText').value = '';
-  document.getElementById('fileStatus').style.display = 'none';
-  document.getElementById('strategyFile').value = '';
-}
-
-// ============================================
-// CLAUDE ANALYSIS + CHAT
-// ============================================
-let chatHistory = [];
-let analysisContext = '';
-
-async function analyzeWithClaude() {
-  const strategy = document.getElementById('strategyText').value.trim();
-  if (!strategy) return alert('Сначала добавь стратегию развития');
-
-  const month = document.getElementById('analyzeMonth').value || new Date().toISOString().substring(0,7);
-  const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
-  if (!tasks.length) return alert('Нет задач за выбранный месяц');
-
-  const aiLoading = document.getElementById('aiLoading');
-  const aiResult = document.getElementById('aiResult');
-  aiLoading.style.display = 'flex';
-  aiResult.style.display = 'none';
-  document.getElementById('aiChatBox').style.display = 'none';
-
-  const tasksList = tasks.map(t => `- [${t.employee_name}] ${t.title} (${t.status==='done'?'✅':'⏳'}, приоритет: ${t.priority})`).join('\n');
-
-  analysisContext = `СТРАТЕГИЯ:\n${strategy}\n\nЗАДАЧИ ЗА ${month}:\n${tasksList}`;
-
-  const prompt = `Ты — бизнес-аналитик банного комплекса. Проанализируй задачи команды за ${month} и оцени соответствие стратегии.
-
-${analysisContext}
-
-Структурированный анализ:
-1. ОБЩАЯ ОЦЕНКА (соответствие стратегии в %)
-2. ЧТО ИДЁТ В НУЖНОМ НАПРАВЛЕНИИ
-3. ЧТО ОТКЛОНЯЕТСЯ ОТ СТРАТЕГИИ  
-4. РЕКОМЕНДАЦИИ на следующий месяц
-
-Конкретно, без воды. На русском.`;
-
-  const result = await callClaude([{ role:'user', content:prompt }]);
-
-  aiLoading.style.display = 'none';
-  aiResult.textContent = result;
-  aiResult.style.display = 'block';
-
-  // Init chat
-  chatHistory = [
-    { role:'user', content:prompt },
-    { role:'assistant', content:result }
-  ];
-  document.getElementById('aiChatMessages').innerHTML = '';
-  addChatBubble('assistant', result);
-  document.getElementById('aiChatBox').style.display = 'block';
-}
-
-async function sendChatMessage() {
-  const input = document.getElementById('aiChatInput');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  addChatBubble('user', text);
-  chatHistory.push({ role:'user', content:text });
-
-  const loadingId = 'loading_'+Date.now();
-  addChatBubble('loading', '...', loadingId);
-
-  const reply = await callClaude(chatHistory);
-  chatHistory.push({ role:'assistant', content:reply });
-
-  const loadingEl = document.getElementById(loadingId);
-  if (loadingEl) loadingEl.remove();
-  addChatBubble('assistant', reply);
-}
-
-function addChatBubble(role, text, id) {
-  const el = document.getElementById('aiChatMessages');
-  const div = document.createElement('div');
-  div.className = `chat-msg ${role==='user'?'user':role==='loading'?'loading-msg':'assistant'}`;
-  div.textContent = text;
-  if (id) div.id = id;
-  el.appendChild(div);
-  el.scrollTop = el.scrollHeight;
-}
-
-async function callClaude(messages) {
-  try {
-    // Convert message history to Gemini format
-    const contents = messages.map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
-
-    const res = await fetch(`${GEMINI_API}?key=${GEMINI_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        generationConfig: { maxOutputTokens: 2048, temperature: 0.7 }
-      })
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Gemini API error');
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Нет ответа';
-  } catch(e) {
-    return `⚠️ Ошибка AI: ${e.message}`;
-  }
 }
 
 // ============================================
