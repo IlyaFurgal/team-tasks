@@ -371,8 +371,9 @@ tr:hover td{background:var(--surface2)}
 // ============================================
 const SUPABASE_URL = 'https://nztphhcluregncwuzadt.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56dHBoaGNsdXJlZ25jd3V6YWR0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODU0MTEwMSwiZXhwIjoyMDk0MTE3MTAxfQ.H8FoRqc1U-IqNJBDJjqdXzV6-V5t3lt96GbJt9GIRbc';
-const ADMIN_PASSWORD = '1983';
-const CLAUDE_API = 'https://api.anthropic.com/v1/messages';
+const ADMIN_PASSWORD = 'R*JIdyV45K3x';
+const GEMINI_KEY = 'AIzaSyA8Hr5yRAQjOxwgUUs1c8vXQbz1p5rueoc';
+const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 const PRIORITY = {
   critical:{ label:'🔴 Критически', color:'#c94a4a', order:0 },
@@ -546,7 +547,7 @@ async function loadDashboard() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
   try {
-    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
+    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}&active_employee=neq.false`);
     const now = new Date();
 
     const stats = employees.map(emp => {
@@ -927,7 +928,7 @@ async function analyzeWithClaude() {
   if (!strategy) return alert('Сначала добавь стратегию развития');
 
   const month = document.getElementById('analyzeMonth').value || new Date().toISOString().substring(0,7);
-  const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
+  const tasks = await sb('GET','tasks',null,`?month=eq.${month}&order=employee_name.asc`);
   if (!tasks.length) return alert('Нет задач за выбранный месяц');
 
   const aiLoading = document.getElementById('aiLoading');
@@ -999,22 +1000,27 @@ function addChatBubble(role, text, id) {
 }
 
 async function callClaude(messages) {
-  // Используем Supabase Edge Function как прокси (настроим позже)
-  // Пока показываем что нужен API ключ
   try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/claude`, {
+    // Convert message history to Gemini format
+    const contents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const res = await fetch(`${GEMINI_API}?key=${GEMINI_KEY}`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ messages })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        generationConfig: { maxOutputTokens: 2048, temperature: 0.7 }
+      })
     });
-    if (!res.ok) throw new Error('Edge Function не настроена');
+
     const data = await res.json();
-    return data.content?.[0]?.text || 'Нет ответа';
+    if (!res.ok) throw new Error(data.error?.message || 'Gemini API error');
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Нет ответа';
   } catch(e) {
-    return `⚠️ Для AI-анализа нужно настроить Supabase Edge Function с API ключом Anthropic.\n\nОшибка: ${e.message}`;
+    return `⚠️ Ошибка AI: ${e.message}`;
   }
 }
 
