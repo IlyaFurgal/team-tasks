@@ -133,6 +133,14 @@ tr:hover td{background:var(--surface2)}
 /* Strategy */
 .strategy-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px}
 .ai-result{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:16px;line-height:1.8;font-size:14px;white-space:pre-wrap}
+.chat-msg{padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.6;max-width:85%}
+.chat-msg.user{background:var(--accent);color:#0f0f0f;align-self:flex-end;font-weight:500}
+.chat-msg.assistant{background:var(--surface2);border:1px solid var(--border);align-self:flex-start;white-space:pre-wrap}
+.chat-msg.loading-msg{background:var(--surface2);border:1px solid var(--border);align-self:flex-start;color:var(--text2)}
+.chat-msg{padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.6;max-width:85%}
+.chat-msg.user{background:var(--accent);color:#0f0f0f;align-self:flex-end;font-weight:500}
+.chat-msg.assistant{background:var(--surface2);border:1px solid var(--border);align-self:flex-start;white-space:pre-wrap}
+.chat-msg.loading-msg{background:var(--surface2);border:1px solid var(--border);align-self:flex-start;color:var(--text2)}
 
 /* Empty / Loading */
 .empty{text-align:center;padding:60px 20px;color:var(--text2)}
@@ -230,24 +238,45 @@ tr:hover td{background:var(--surface2)}
     <!-- STRATEGY -->
     <div class="section" id="section-strategy">
       <div class="section-title">Стратегия и AI-анализ</div>
+
+      <!-- Загрузка стратегии -->
       <div class="strategy-box">
         <div class="form-label" style="margin-bottom:10px">СТРАТЕГИЯ РАЗВИТИЯ</div>
-        <textarea class="input" id="strategyText" placeholder="Вставь текст стратегии развития объектов..." style="min-height:200px"></textarea>
-        <div style="display:flex;gap:10px;margin-top:12px">
-          <button class="btn small" onclick="saveStrategy()">Сохранить стратегию</button>
+        <div id="fileUploadArea" style="border:2px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:12px" onclick="document.getElementById('strategyFile').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="handleFileDrop(event)">
+          <div style="font-size:32px;margin-bottom:8px">📄</div>
+          <div style="font-size:14px;color:var(--text2);margin-bottom:4px">Перетащи файл или нажми для выбора</div>
+          <div style="font-size:12px;color:var(--text3)">PDF, Word (.docx), TXT</div>
+          <input type="file" id="strategyFile" accept=".txt,.pdf,.docx" style="display:none" onchange="handleFileSelect(event)">
         </div>
+        <div id="fileStatus" style="font-size:13px;color:var(--text2);margin-bottom:12px;display:none"></div>
+        <textarea class="input" id="strategyText" placeholder="Или вставь текст стратегии вручную..." style="min-height:160px"></textarea>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="btn small" onclick="saveStrategy()">💾 Сохранить стратегию</button>
+          <button class="btn small secondary" onclick="clearStrategy()">Очистить</button>
+        </div>
+        <div id="strategySaveMsg" style="font-size:13px;margin-top:8px;min-height:20px"></div>
       </div>
+
+      <!-- AI анализ -->
       <div class="strategy-box">
         <div class="form-label" style="margin-bottom:10px">AI-АНАЛИЗ ЗАДАЧ</div>
-        <p style="font-size:14px;color:var(--text2);margin-bottom:16px">Claude проверит задачи текущего месяца и оценит — соответствуют ли они стратегии развития</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn small" onclick="analyzeWithClaude()">🤖 Запустить анализ</button>
-          <select class="select" id="analyzeMonth">
-            <option value="">Текущий месяц</option>
-          </select>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:16px">Claude проверит задачи выбранного месяца и оценит соответствие стратегии, затем можно обсудить результаты в диалоге</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="btn small" onclick="analyzeWithClaude()" id="analyzeBtn">🤖 Запустить анализ</button>
+          <select class="select" id="analyzeMonth"><option value="">Текущий месяц</option></select>
         </div>
-        <div id="aiResult" style="display:none" class="ai-result"></div>
         <div id="aiLoading" style="display:none" class="loading"><div class="spinner"></div> Claude анализирует задачи...</div>
+        <div id="aiResult" style="display:none" class="ai-result"></div>
+      </div>
+
+      <!-- Диалог с Claude -->
+      <div class="strategy-box" id="aiChatBox" style="display:none">
+        <div class="form-label" style="margin-bottom:10px">ДИАЛОГ С CLAUDE</div>
+        <div id="aiChatMessages" style="max-height:400px;overflow-y:auto;margin-bottom:16px;display:flex;flex-direction:column;gap:12px"></div>
+        <div style="display:flex;gap:10px">
+          <input type="text" class="input" id="aiChatInput" placeholder="Задай вопрос по анализу..." style="margin-bottom:0;flex:1" onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="btn small" onclick="sendChatMessage()">→</button>
+        </div>
       </div>
     </div>
 
@@ -517,7 +546,7 @@ async function loadDashboard() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
   try {
-    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
+    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}&active_employee=neq.false`);
     const now = new Date();
 
     const stats = employees.map(emp => {
@@ -805,58 +834,188 @@ async function saveStrategy() {
   alert('Стратегия сохранена');
 }
 
+// ============================================
+// FILE UPLOAD
+// ============================================
+async function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) await processStrategyFile(file);
+}
+
+function handleFileDrop(event) {
+  event.preventDefault();
+  document.getElementById('fileUploadArea').style.borderColor = 'var(--border)';
+  const file = event.dataTransfer.files[0];
+  if (file) processStrategyFile(file);
+}
+
+async function processStrategyFile(file) {
+  const status = document.getElementById('fileStatus');
+  status.style.display = 'block';
+  status.style.color = 'var(--text2)';
+  status.textContent = `⏳ Читаю файл: ${file.name}...`;
+
+  try {
+    let text = '';
+    if (file.name.endsWith('.txt')) {
+      text = await file.text();
+    } else if (file.name.endsWith('.pdf')) {
+      // Read PDF as base64 and extract text via simple approach
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      // Simple PDF text extraction - find text between BT/ET markers
+      const str = new TextDecoder('latin1').decode(bytes);
+      const matches = str.match(/\(([^)]{2,500})\)/g) || [];
+      text = matches.map(m => m.slice(1,-1)).filter(s => /[а-яёА-ЯЁa-zA-Z]{3,}/.test(s)).join(' ');
+      if (text.length < 100) {
+        status.style.color = 'var(--warn)';
+        status.textContent = '⚠️ PDF извлечён частично. Рекомендую использовать TXT или вставить текст вручную.';
+      }
+    } else if (file.name.endsWith('.docx')) {
+      // DOCX is a ZIP - extract document.xml
+      const JSZip = await loadJSZip();
+      if (JSZip) {
+        const zip = await JSZip.loadAsync(file);
+        const xmlFile = zip.files['word/document.xml'];
+        if (xmlFile) {
+          const xml = await xmlFile.async('text');
+          text = xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+      } else {
+        throw new Error('Для .docx нужна библиотека. Используй TXT.');
+      }
+    }
+
+    if (text.length > 50) {
+      document.getElementById('strategyText').value = text.substring(0, 20000);
+      status.style.color = 'var(--done)';
+      status.textContent = `✅ Файл загружен: ${file.name} (${Math.round(text.length/1000)}к символов)`;
+    } else {
+      throw new Error('Не удалось извлечь текст из файла');
+    }
+  } catch(e) {
+    status.style.color = 'var(--danger)';
+    status.textContent = `❌ Ошибка: ${e.message}. Попробуй TXT или вставь текст вручную.`;
+  }
+}
+
+async function loadJSZip() {
+  if (window.JSZip) return window.JSZip;
+  return new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = () => resolve(window.JSZip);
+    s.onerror = () => resolve(null);
+    document.head.appendChild(s);
+  });
+}
+
+function clearStrategy() {
+  document.getElementById('strategyText').value = '';
+  document.getElementById('fileStatus').style.display = 'none';
+  document.getElementById('strategyFile').value = '';
+}
+
+// ============================================
+// CLAUDE ANALYSIS + CHAT
+// ============================================
+let chatHistory = [];
+let analysisContext = '';
+
 async function analyzeWithClaude() {
   const strategy = document.getElementById('strategyText').value.trim();
   if (!strategy) return alert('Сначала добавь стратегию развития');
 
   const month = document.getElementById('analyzeMonth').value || new Date().toISOString().substring(0,7);
-  const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
-
+  const tasks = await sb('GET','tasks',null,`?month=eq.${month}&order=employee_name.asc`);
   if (!tasks.length) return alert('Нет задач за выбранный месяц');
 
   const aiLoading = document.getElementById('aiLoading');
   const aiResult = document.getElementById('aiResult');
   aiLoading.style.display = 'flex';
   aiResult.style.display = 'none';
+  document.getElementById('aiChatBox').style.display = 'none';
 
-  const tasksList = tasks.map(t => `- [${t.employee_name}] ${t.title} (${t.status === 'done' ? '✅' : '⏳'}, приоритет: ${t.priority})`).join('\n');
+  const tasksList = tasks.map(t => `- [${t.employee_name}] ${t.title} (${t.status==='done'?'✅':'⏳'}, приоритет: ${t.priority})`).join('\n');
 
-  const prompt = `Ты — бизнес-аналитик. Проанализируй задачи команды за месяц ${month} и оцени соответствие стратегии развития.
+  analysisContext = `СТРАТЕГИЯ:\n${strategy}\n\nЗАДАЧИ ЗА ${month}:\n${tasksList}`;
 
-СТРАТЕГИЯ РАЗВИТИЯ:
-${strategy}
+  const prompt = `Ты — бизнес-аналитик банного комплекса. Проанализируй задачи команды за ${month} и оцени соответствие стратегии.
 
-ЗАДАЧИ КОМАНДЫ ЗА МЕСЯЦ:
-${tasksList}
+${analysisContext}
 
-Дай структурированный анализ:
+Структурированный анализ:
 1. ОБЩАЯ ОЦЕНКА (соответствие стратегии в %)
 2. ЧТО ИДЁТ В НУЖНОМ НАПРАВЛЕНИИ
-3. ЧТО ОТКЛОНЯЕТСЯ ОТ СТРАТЕГИИ
+3. ЧТО ОТКЛОНЯЕТСЯ ОТ СТРАТЕГИИ  
 4. РЕКОМЕНДАЦИИ на следующий месяц
 
-Будь конкретным, без воды. Ответ на русском языке.`;
+Конкретно, без воды. На русском.`;
 
-  try {
-    const res = await fetch(CLAUDE_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    const data = await res.json();
-    const text = data.content?.[0]?.text || 'Ошибка получения ответа';
-    aiResult.textContent = text;
-    aiResult.style.display = 'block';
-  } catch(e) {
-    aiResult.textContent = 'Ошибка: ' + e.message;
-    aiResult.style.display = 'block';
-  }
+  const result = await callClaude([{ role:'user', content:prompt }]);
 
   aiLoading.style.display = 'none';
+  aiResult.textContent = result;
+  aiResult.style.display = 'block';
+
+  // Init chat
+  chatHistory = [
+    { role:'user', content:prompt },
+    { role:'assistant', content:result }
+  ];
+  document.getElementById('aiChatMessages').innerHTML = '';
+  addChatBubble('assistant', result);
+  document.getElementById('aiChatBox').style.display = 'block';
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('aiChatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addChatBubble('user', text);
+  chatHistory.push({ role:'user', content:text });
+
+  const loadingId = 'loading_'+Date.now();
+  addChatBubble('loading', '...', loadingId);
+
+  const reply = await callClaude(chatHistory);
+  chatHistory.push({ role:'assistant', content:reply });
+
+  const loadingEl = document.getElementById(loadingId);
+  if (loadingEl) loadingEl.remove();
+  addChatBubble('assistant', reply);
+}
+
+function addChatBubble(role, text, id) {
+  const el = document.getElementById('aiChatMessages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role==='user'?'user':role==='loading'?'loading-msg':'assistant'}`;
+  div.textContent = text;
+  if (id) div.id = id;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function callClaude(messages) {
+  // Используем Supabase Edge Function как прокси (настроим позже)
+  // Пока показываем что нужен API ключ
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/claude`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ messages })
+    });
+    if (!res.ok) throw new Error('Edge Function не настроена');
+    const data = await res.json();
+    return data.content?.[0]?.text || 'Нет ответа';
+  } catch(e) {
+    return `⚠️ Для AI-анализа нужно настроить Supabase Edge Function с API ключом Anthropic.\n\nОшибка: ${e.message}`;
+  }
 }
 
 // ============================================
