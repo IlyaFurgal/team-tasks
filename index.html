@@ -202,7 +202,12 @@ tr:hover td{background:var(--surface2)}
     <div class="section" id="section-tasks">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
         <div class="section-title" style="margin-bottom:0">Все задачи</div>
-        <button class="btn small" onclick="openAddTaskModal()">+ Добавить задачу</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn small secondary" onclick="downloadTemplate()">📋 Шаблон</button>
+          <button class="btn small secondary" onclick="document.getElementById('importFile').click()">📥 Импорт Excel</button>
+          <input type="file" id="importFile" accept=".xlsx" style="display:none" onchange="importFromExcel(event)">
+          <button class="btn small" onclick="openAddTaskModal()">+ Добавить задачу</button>
+        </div>
       </div>
       <div class="tasks-toolbar">
         <select class="select" id="filterEmployee" onchange="loadTasks()"><option value="">Все сотрудники</option></select>
@@ -420,6 +425,7 @@ function adminLogin() {
   const pass = document.getElementById('adminPass').value;
   const err = document.getElementById('loginError');
   if (pass === ADMIN_PASSWORD) {
+    sessionStorage.setItem('admin_auth', '1');
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     init();
@@ -429,10 +435,20 @@ function adminLogin() {
 }
 
 function logout() {
+  sessionStorage.removeItem('admin_auth');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('adminPass').value = '';
 }
+
+// Auto-login if session active
+window.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem('admin_auth') === '1') {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    init();
+  }
+});
 
 // ============================================
 // INIT
@@ -828,7 +844,7 @@ async function generateReport() {
 
   try {
     // Get all tasks in range
-    const allTasksRaw = await sb('GET', 'tasks', null, `?order=employee_name.asc,deadline.asc`);
+    const allTasksRaw = await sb('GET','tasks',null,`?order=employee_name.asc,deadline.asc`);
     const tasks = allTasksRaw.filter(t => t.month >= from && t.month <= to);
     const checkins = await sb('GET','checkins',null,`?created_at=gte.${from}-01&order=employee_name.asc,created_at.desc`);
     const now = new Date();
@@ -934,6 +950,154 @@ function copyReport() {
     msg.textContent = '✓ Скопировано в буфер обмена';
     setTimeout(() => msg.textContent = '', 2500);
   });
+}
+
+// ============================================
+// DOWNLOAD TEMPLATE
+// ============================================
+async function downloadTemplate() {
+  // Load SheetJS if needed
+  if (!window.XLSX) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const wb = window.XLSX.utils.book_new();
+
+  // Main sheet data
+  const wsData = [
+    ["ШАБЛОН ИМПОРТА ЗАДАЧ — Княже · Таёжный"],
+    ["Заполни таблицу и загрузи файл через кнопку «Импорт Excel»"],
+    ["Сотрудник (имя точно как в системе)", "Название задачи", "Срок (ГГГГ-ММ-ДД)", "Приоритет", "Заметка (необязательно)"],
+    ["например: Константин", "например: Провести аудит склада", "например: 2026-06-30", "critical / high / medium / low", "Дополнительные детали"],
+    ["Константин", "Провести аудит банных программ", "2026-06-15", "high", "Сравнить с конкурентами"],
+    ["Андрей", "Обновить меню ресторана", "2026-06-20", "medium", ""],
+    ["Валерия", "Запустить акцию на июнь", "2026-06-10", "critical", "Согласовать с руководством"],
+  ];
+
+  // Add 10 empty rows for filling
+  for (let i = 0; i < 10; i++) wsData.push(["", "", "", "", ""]);
+
+  const ws = window.XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 30 }, { wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 35 }
+  ];
+
+  // Hint sheet
+  const hintData = [
+    ["ПОЛЕ", "ОПИСАНИЕ"],
+    ["Сотрудник", "Имя точно как в системе (с заглавной буквы)"],
+    ["Название задачи", "Краткое описание задачи"],
+    ["Срок", "Дата в формате ГГГГ-ММ-ДД, например 2026-06-30"],
+    ["Приоритет", "Одно из: critical, high, medium, low"],
+    ["Заметка", "Необязательное поле с деталями"],
+    ["", ""],
+    ["ПРИОРИТЕТЫ", "ЗНАЧЕНИЕ"],
+    ["critical", "Критически важно 🔴"],
+    ["high", "Важно 🟠"],
+    ["medium", "Средней важности 🟡 (по умолчанию)"],
+    ["low", "Малой важности 🟢"],
+  ];
+
+  const ws2 = window.XLSX.utils.aoa_to_sheet(hintData);
+  ws2['!cols'] = [{ wch: 20 }, { wch: 50 }];
+
+  window.XLSX.utils.book_append_sheet(wb, ws, "Задачи");
+  window.XLSX.utils.book_append_sheet(wb, ws2, "Справка");
+
+  window.XLSX.writeFile(wb, "шаблон_задач.xlsx");
+}
+
+// ============================================
+// IMPORT FROM EXCEL
+// ============================================
+async function importFromExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+
+  // Load SheetJS
+  if (!window.XLSX) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const buffer = await file.arrayBuffer();
+  const wb = window.XLSX.read(buffer, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  // Find header row (row with "Сотрудник")
+  let dataStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (String(rows[i][0]).toLowerCase().includes('сотрудник')) { dataStart = i + 2; break; }
+  }
+  if (dataStart === -1) dataStart = 4; // fallback: skip 3 header rows + hint row
+
+  const tasks = [];
+  const errors = [];
+
+  for (let i = dataStart; i < rows.length; i++) {
+    const [empName, title, deadline, priority, notes] = rows[i].map(v => String(v || '').trim());
+    if (!empName || !title || !deadline) continue;
+
+    // Find employee
+    const emp = employees.find(e => e.name.toLowerCase() === empName.toLowerCase());
+    if (!emp) { errors.push(`Строка ${i+1}: сотрудник "${empName}" не найден`); continue; }
+
+    // Validate deadline format
+    const dlMatch = deadline.match(/^(\d{4}-\d{2}-\d{2})$/);
+    if (!dlMatch) { errors.push(`Строка ${i+1}: неверный формат даты "${deadline}" (нужно ГГГГ-ММ-ДД)`); continue; }
+
+    const validPriorities = ['critical','high','medium','low'];
+    const finalPriority = validPriorities.includes(priority) ? priority : 'medium';
+
+    tasks.push({
+      id: 'task_' + Date.now() + '_' + i,
+      employee_id: emp.id,
+      employee_name: emp.name,
+      title,
+      deadline: dlMatch[1],
+      month: dlMatch[1].substring(0, 7),
+      priority: finalPriority,
+      notes: notes || '',
+      status: 'pending',
+      created_by: 'admin'
+    });
+  }
+
+  if (!tasks.length && !errors.length) {
+    return alert('Не найдено задач для импорта. Проверь что данные начинаются с 5-й строки.');
+  }
+
+  // Show preview
+  const errMsg = errors.length ? `\n\nОшибки (${errors.length}):\n` + errors.slice(0,5).join('\n') + (errors.length > 5 ? `\n...ещё ${errors.length-5}` : '') : '';
+  if (!confirm(`Импортировать ${tasks.length} задач?${errMsg}`)) return;
+
+  // Batch insert
+  let imported = 0;
+  for (const task of tasks) {
+    try {
+      await sb('POST', 'tasks', task);
+      imported++;
+    } catch(e) {
+      errors.push(`Задача "${task.title}": ${e.message}`);
+    }
+  }
+
+  alert(`✅ Импортировано: ${imported} задач${errors.length ? '\n⚠️ Ошибок: ' + errors.length : ''}`);
+  loadTasks();
+  loadDashboard();
 }
 
 // ============================================
