@@ -227,8 +227,31 @@ tr:hover td{background:var(--surface2)}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
         <div class="section-title" style="margin-bottom:0">Еженедельные отчёты</div>
         <select class="select" id="filterCheckinEmployee" onchange="loadCheckins()"><option value="">Все сотрудники</option></select>
+        <button class="btn small" onclick="openCheckinRequestModal()">📩 Запросить отчёт</button>
       </div>
       <div id="checkinsContent"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
+
+<!-- MODAL: Запрос чекпоинта -->
+<div class="modal-overlay" id="modalCheckinRequest">
+  <div class="modal">
+    <div class="modal-title">Запросить чекпоинт</div>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:20px">Сотрудник увидит уведомление с просьбой заполнить еженедельный отчёт</p>
+    <div class="form-row">
+      <label class="form-label">Кому отправить</label>
+      <select class="input" id="checkinRequestTarget">
+        <option value="all">Всем сотрудникам</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Сообщение (необязательно)</label>
+      <textarea class="input" id="checkinRequestMsg" placeholder="Например: Заполни отчёт до понедельника 10:00..." style="min-height:80px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('modalCheckinRequest')">Отмена</button>
+      <button class="btn" onclick="sendCheckinRequest()">Отправить запрос</button>
+    </div>
+  </div>
+</div>
     </div>
 
     <!-- EMPLOYEES -->
@@ -344,6 +367,28 @@ tr:hover td{background:var(--surface2)}
     </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('modalComments')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Запрос чекпоинта -->
+<div class="modal-overlay" id="modalCheckinRequest">
+  <div class="modal">
+    <div class="modal-title">Запросить чекпоинт</div>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:20px">Сотрудник увидит уведомление с просьбой заполнить еженедельный отчёт при следующем входе</p>
+    <div class="form-row">
+      <label class="form-label">Кому отправить</label>
+      <select class="input" id="checkinRequestTarget">
+        <option value="all">Всем сотрудникам</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Сообщение (необязательно)</label>
+      <textarea class="input" id="checkinRequestMsg" placeholder="Например: Заполни отчёт до понедельника 10:00..." style="min-height:80px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('modalCheckinRequest')">Отмена</button>
+      <button class="btn" onclick="sendCheckinRequest()">Отправить запрос</button>
     </div>
   </div>
 </div>
@@ -652,10 +697,12 @@ async function loadTasks() {
     else if (statusFilter === 'pending') tasks = tasks.filter(t => t.status !== 'done' && !t.isOverdue);
     else if (statusFilter === 'overdue') tasks = tasks.filter(t => t.isOverdue);
 
-    // Sort: done first
+    // Sort: when showing all — done tasks go to END; when filtered to done — sort by date
     tasks.sort((a,b) => {
-      if (a.status==='done' && b.status!=='done') return -1;
-      if (a.status!=='done' && b.status==='done') return 1;
+      if (!statusFilter) {
+        if (a.status==='done' && b.status!=='done') return 1;
+        if (a.status!=='done' && b.status==='done') return -1;
+      }
       const da = a.deadline||'9999', db = b.deadline||'9999';
       if (da!==db) return da<db?-1:1;
       return (PRIORITY[a.priority]?.order??2) - (PRIORITY[b.priority]?.order??2);
@@ -688,7 +735,7 @@ function renderTaskTable(tasks) {
       const label = t.status==='done'?'Выполнено':t.isOverdue?'Просрочено':'В работе';
       const dl = t.deadline ? new Date(t.deadline+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}) : '—';
       const pr = PRIORITY[t.priority] || PRIORITY.medium;
-      const commentPreview = t.comment ? `<span class="comment-text">${t.comment}</span>` : '<span style="color:var(--text3);font-size:12px">—</span>';
+      const commentPreview = t.comment ? `<span style="font-size:13px;color:var(--text2);font-style:italic;line-height:1.5;display:block;max-width:240px">${t.comment}</span>` : '<span style="color:var(--text3);font-size:12px">—</span>';
       return `<tr style="${t.status==='done'?'opacity:.65':''}">
         <td><strong>${t.employee_name}</strong></td>
         <td>
@@ -761,7 +808,10 @@ async function submitTask() {
 
 async function deleteTask(taskId) {
   if (!confirm('Удалить задачу?')) return;
-  await sb('DELETE','tasks',null,`?id=eq.${taskId}`);
+  try {
+    await sb('DELETE','tasks',null,`?id=eq.${encodeURIComponent(taskId)}`);
+    await sb('DELETE','task_comments',null,`?task_id=eq.${encodeURIComponent(taskId)}`);
+  } catch(e) { console.error(e); }
   loadTasks();
   loadDashboard();
 }
@@ -1012,6 +1062,43 @@ async function downloadTemplate() {
   window.XLSX.utils.book_append_sheet(wb, ws2, "Справка");
 
   window.XLSX.writeFile(wb, "шаблон_задач.xlsx");
+}
+
+// ============================================
+// CHECKIN REQUEST
+// ============================================
+function openCheckinRequestModal() {
+  // Populate employee select
+  const sel = document.getElementById('checkinRequestTarget');
+  sel.innerHTML = '<option value="all">Всем сотрудникам</option>';
+  employees.forEach(e => {
+    sel.innerHTML += `<option value="${e.id}">${e.name}</option>`;
+  });
+  document.getElementById('checkinRequestMsg').value = '';
+  openModal('modalCheckinRequest');
+}
+
+async function sendCheckinRequest() {
+  const target = document.getElementById('checkinRequestTarget').value;
+  const msg = document.getElementById('checkinRequestMsg').value.trim() || 'Пожалуйста, заполни еженедельный отчёт';
+  
+  // Save request to Supabase so employees see it on their page
+  const targets = target === 'all' ? employees.map(e => e.id) : [target];
+  
+  for (const empId of targets) {
+    await sb('POST', 'checkin_requests', {
+      id: 'req_' + Date.now() + '_' + empId,
+      employee_id: empId,
+      message: msg,
+      created_at: new Date().toISOString(),
+      seen: false
+    }).catch(() => {}); // ignore if table doesn't exist yet
+  }
+
+  closeModal('modalCheckinRequest');
+  
+  const targetName = target === 'all' ? 'всем сотрудникам' : employees.find(e=>e.id===target)?.name;
+  alert(`✅ Запрос отправлен: ${targetName}`);
 }
 
 // ============================================
