@@ -236,6 +236,43 @@ function enterApp(emp) {
   document.getElementById('greetingName').textContent = emp.name;
   document.getElementById('greetingObject').textContent = emp.object.toUpperCase();
   loadMyTasks();
+  checkCheckinRequest();
+}
+
+async function checkCheckinRequest() {
+  try {
+    const requests = await sb('GET','checkin_requests',null,
+      `?employee_id=eq.${employee.id}&seen=eq.false&order=created_at.desc`);
+    if (!requests.length) return;
+    
+    const req = requests[0];
+    // Mark as seen
+    await sb('PATCH','checkin_requests',{ seen: true },`?id=eq.${req.id}`);
+    
+    // Show banner on checkin tab
+    const banner = document.createElement('div');
+    banner.id = 'checkinBanner';
+    banner.style.cssText = 'background:linear-gradient(135deg,#1a2a1a,#1a1a0f);border:1px solid var(--accent);border-radius:var(--radius);padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:12px';
+    banner.innerHTML = `
+      <div style="font-size:24px">📩</div>
+      <div style="flex:1">
+        <div style="font-family:var(--font-head);font-size:12px;color:var(--accent);margin-bottom:4px">ЗАПРОС ОТ РУКОВОДИТЕЛЯ</div>
+        <div style="font-size:14px">${req.message}</div>
+      </div>
+      <button onclick="goToCheckin()" style="background:var(--accent);color:#0f0f0f;border:none;border-radius:8px;padding:8px 14px;font-family:var(--font-head);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">Заполнить →</button>
+    `;
+    
+    // Insert before tasks list
+    const tasksList = document.getElementById('tasksList');
+    tasksList.parentNode.insertBefore(banner, tasksList);
+  } catch(e) {} // silently fail if table doesn't exist
+}
+
+function goToCheckin() {
+  const banner = document.getElementById('checkinBanner');
+  if (banner) banner.remove();
+  showTab('checkin', document.querySelectorAll('.tab')[2]);
+  document.getElementById('tab-checkin').scrollIntoView({ behavior: 'smooth' });
 }
 
 function empLogout() {
