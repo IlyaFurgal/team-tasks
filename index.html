@@ -617,7 +617,7 @@ async function loadDashboard() {
         total: empTasks.length,
         done: empTasks.filter(t => t.status === 'done').length,
         pending: empTasks.filter(t => t.status !== 'done').length,
-        overdue: empTasks.filter(t => t.status !== 'done' && t.deadline && new Date(t.deadline) < today).length
+        overdue: empTasks.filter(t => t.status !== 'done' && t.deadline && t.deadline < today).length
       };
     });
 
@@ -690,7 +690,7 @@ async function loadTasks() {
     const current = allTasks.filter(t => t.month === selMonth);
     const carried = allTasks.filter(t => t.month < selMonth && t.status !== 'done');
 
-    let tasks = current.map(t => ({ ...t, isOverdue: t.status !== 'done' && t.deadline && new Date(t.deadline) < today }));
+    let tasks = current.map(t => ({ ...t, isOverdue: t.status !== 'done' && t.deadline && t.deadline < today }));
 
     // Status filter
     if (statusFilter === 'done') tasks = tasks.filter(t => t.status === 'done');
@@ -717,7 +717,7 @@ async function loadTasks() {
       (carried.length && !statusFilter ? `
         <div class="carried-section">
           <div class="carried-label">⏭ Переходящие задачи из прошлых месяцев — ${carried.length}</div>
-          ${renderTaskTable(carried.map(t => ({...t, isOverdue: t.deadline && new Date(t.deadline)<today})))}
+          ${renderTaskTable(carried.map(t => ({...t, isOverdue: t.deadline && t.deadline < today})))}
         </div>` : '');
   } catch(e) {
     el.innerHTML = emptyState('⚠️','Ошибка загрузки', e.message);
