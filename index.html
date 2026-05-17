@@ -608,7 +608,7 @@ async function loadDashboard() {
 
   try {
     const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
-    const now = new Date();
+    const today = new Date().toISOString().substring(0, 10);
 
     const stats = employees.map(emp => {
       const empTasks = tasks.filter(t => t.employee_id === emp.id);
@@ -683,7 +683,7 @@ async function loadTasks() {
     if (empId) query += `&employee_id=eq.${empId}`;
 
     const allTasks = await sb('GET', 'tasks', null, query);
-    const now = new Date();
+    const today = new Date().toISOString().substring(0, 10);
     const selMonth = month;
 
     // Split: current month, carried (previous months not done)
@@ -717,7 +717,7 @@ async function loadTasks() {
       (carried.length && !statusFilter ? `
         <div class="carried-section">
           <div class="carried-label">⏭ Переходящие задачи из прошлых месяцев — ${carried.length}</div>
-          ${renderTaskTable(carried.map(t => ({...t, isOverdue: t.deadline && new Date(t.deadline)<now})))}
+          ${renderTaskTable(carried.map(t => ({...t, isOverdue: t.deadline && new Date(t.deadline)<today})))}
         </div>` : '');
   } catch(e) {
     el.innerHTML = emptyState('⚠️','Ошибка загрузки', e.message);
