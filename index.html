@@ -180,6 +180,7 @@ tr:hover td{background:var(--surface2)}
       <button class="nav-btn" onclick="showSection('checkins',this)">📋 <span>Чекпоинты</span></button>
       <button class="nav-btn" onclick="showSection('employees',this)">👥 <span>Команда</span></button>
       <button class="nav-btn" onclick="showSection('strategy',this)">🎯 <span>Стратегия</span></button>
+      <button class="nav-btn" onclick="showSection('mytasks',this)">👤 <span>Мои задачи</span></button>
     </nav>
     <button class="logout-btn" onclick="logout()">Выйти</button>
   </header>
@@ -230,6 +231,39 @@ tr:hover td{background:var(--surface2)}
         <button class="btn small" onclick="openCheckinRequestModal()">📩 Запросить отчёт</button>
       </div>
       <div id="checkinsContent"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
+
+<!-- MODAL: Моя задача -->
+<div class="modal-overlay" id="modalMyTask">
+  <div class="modal">
+    <div class="modal-title" id="myTaskModalTitle">Новая задача</div>
+    <input type="hidden" id="myTaskEditId">
+    <div class="form-row">
+      <label class="form-label">Задача</label>
+      <input type="text" class="input" id="myTaskTitle" placeholder="Описание задачи">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Срок выполнения</label>
+      <input type="date" class="input" id="myTaskDeadline">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Приоритет</label>
+      <select class="input" id="myTaskPriority">
+        <option value="critical">🔴 Критически важно</option>
+        <option value="high">🟠 Важно</option>
+        <option value="medium" selected>🟡 Средней важности</option>
+        <option value="low">🟢 Малой важности</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Заметка (необязательно)</label>
+      <textarea class="input" id="myTaskNotes" placeholder="Детали..." style="min-height:60px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('modalMyTask')">Отмена</button>
+      <button class="btn" id="myTaskSaveBtn" onclick="submitMyTask()">Добавить</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: Запрос чекпоинта -->
 <div class="modal-overlay" id="modalCheckinRequest">
@@ -314,6 +348,24 @@ tr:hover td{background:var(--surface2)}
       </div>
     </div>
 
+    <!-- MY TASKS -->
+    <div class="section" id="section-mytasks">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+        <div class="section-title" style="margin-bottom:0">Мои задачи</div>
+        <button class="btn small" onclick="openMyTaskModal()">+ Добавить задачу</button>
+      </div>
+      <div class="tasks-toolbar">
+        <input type="month" class="month-input" id="myTasksMonth" onchange="loadMyAdminTasks()">
+        <select class="select" id="myTasksStatus" onchange="loadMyAdminTasks()">
+          <option value="">Все статусы</option>
+          <option value="pending">В работе</option>
+          <option value="done">Выполнено</option>
+          <option value="overdue">Просрочено</option>
+        </select>
+      </div>
+      <div id="myTasksContent"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
+    </div>
+
   </main>
 </div>
 
@@ -367,6 +419,39 @@ tr:hover td{background:var(--surface2)}
     </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeModal('modalComments')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Моя задача -->
+<div class="modal-overlay" id="modalMyTask">
+  <div class="modal">
+    <div class="modal-title" id="myTaskModalTitle">Новая задача</div>
+    <input type="hidden" id="myTaskEditId">
+    <div class="form-row">
+      <label class="form-label">Задача</label>
+      <input type="text" class="input" id="myTaskTitle" placeholder="Описание задачи">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Срок выполнения</label>
+      <input type="date" class="input" id="myTaskDeadline">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Приоритет</label>
+      <select class="input" id="myTaskPriority">
+        <option value="critical">🔴 Критически важно</option>
+        <option value="high">🟠 Важно</option>
+        <option value="medium" selected>🟡 Средней важности</option>
+        <option value="low">🟢 Малой важности</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Заметка (необязательно)</label>
+      <textarea class="input" id="myTaskNotes" placeholder="Детали..." style="min-height:60px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('modalMyTask')">Отмена</button>
+      <button class="btn" id="myTaskSaveBtn" onclick="submitMyTask()">Добавить</button>
     </div>
   </div>
 </div>
@@ -509,6 +594,11 @@ async function init() {
   if (exportFrom) exportFrom.value = m;
   if (exportTo) exportTo.value = m;
 
+  document.getElementById('myTasksMonth').value = m;
+
+  await loadEmployees();
+  await ensureAdminEmployee();
+  // Reload employees to include admin
   await loadEmployees();
   loadDashboard();
   loadTasks();
@@ -607,7 +697,8 @@ async function loadDashboard() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
   try {
-    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}`);
+    const tasks = await sb('GET', 'tasks', null, `?month=eq.${month}&active_employee=neq.false`);
+    const now = new Date();
     const today = new Date().toISOString().substring(0, 10);
 
     const stats = employees.map(emp => {
@@ -683,6 +774,7 @@ async function loadTasks() {
     if (empId) query += `&employee_id=eq.${empId}`;
 
     const allTasks = await sb('GET', 'tasks', null, query);
+    const now = new Date();
     const today = new Date().toISOString().substring(0, 10);
     const selMonth = month;
 
@@ -1188,6 +1280,160 @@ async function importFromExcel(event) {
 }
 
 // ============================================
+// MY ADMIN TASKS
+// ============================================
+const ADMIN_EMP_ID = 'emp_admin';
+const ADMIN_EMP_NAME = 'Роман'; // Имя руководителя в отчётах
+
+async function ensureAdminEmployee() {
+  // Check if admin employee record exists
+  const data = await sb('GET','employees',null,`?id=eq.${ADMIN_EMP_ID}`);
+  if (!data.length) {
+    await sb('POST','employees',{
+      id: ADMIN_EMP_ID,
+      name: ADMIN_EMP_NAME,
+      password: 'admin_internal',
+      object: 'Оба',
+      active: true
+    });
+  }
+}
+
+async function loadMyAdminTasks() {
+  const month = document.getElementById('myTasksMonth').value;
+  const statusFilter = document.getElementById('myTasksStatus').value;
+  const el = document.getElementById('myTasksContent');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
+
+  try {
+    let query = `?employee_id=eq.${ADMIN_EMP_ID}&order=deadline.asc`;
+    const allTasks = await sb('GET','tasks',null,query);
+    const today = new Date().toISOString().substring(0,10);
+    const selMonth = month;
+
+    const current = allTasks.filter(t => t.month === selMonth);
+    const carried = allTasks.filter(t => t.month < selMonth && t.status !== 'done');
+
+    let tasks = current.map(t => ({ ...t, isOverdue: t.status !== 'done' && t.deadline && t.deadline < today }));
+
+    if (statusFilter === 'done') tasks = tasks.filter(t => t.status === 'done');
+    else if (statusFilter === 'pending') tasks = tasks.filter(t => t.status !== 'done' && !t.isOverdue);
+    else if (statusFilter === 'overdue') tasks = tasks.filter(t => t.isOverdue);
+
+    tasks.sort((a,b) => {
+      if (!statusFilter) {
+        if (a.status==='done' && b.status!=='done') return 1;
+        if (a.status!=='done' && b.status==='done') return -1;
+      }
+      const da=a.deadline||'9999', db=b.deadline||'9999';
+      if (da!==db) return da<db?-1:1;
+      return (PRIORITY[a.priority]?.order??2)-(PRIORITY[b.priority]?.order??2);
+    });
+
+    if (!tasks.length && !carried.length) {
+      el.innerHTML = emptyState('👤','Задач нет','Добавь задачу через кнопку выше');
+      return;
+    }
+
+    el.innerHTML = renderMyTaskTable(tasks) +
+      (carried.length && !statusFilter ? `
+        <div class="carried-section">
+          <div class="carried-label">⏭ Переходящие — ${carried.length}</div>
+          ${renderMyTaskTable(carried.map(t => ({...t, isOverdue: t.deadline && t.deadline < today})))}
+        </div>` : '');
+  } catch(e) {
+    el.innerHTML = emptyState('⚠️','Ошибка', e.message);
+  }
+}
+
+function renderMyTaskTable(tasks) {
+  if (!tasks.length) return '';
+  return `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>ЗАДАЧА</th><th>ПРИОРИТЕТ</th><th>СРОК</th><th>СТАТУС</th><th>КОММЕНТАРИЙ</th><th></th>
+    </tr></thead>
+    <tbody>${tasks.map(t => {
+      const badge = t.status==='done'?'done':t.isOverdue?'overdue':'pending';
+      const label = t.status==='done'?'Выполнено':t.isOverdue?'Просрочено':'В работе';
+      const dl = t.deadline ? new Date(t.deadline+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}) : '—';
+      const pr = PRIORITY[t.priority] || PRIORITY.medium;
+      return `<tr style="${t.status==='done'?'opacity:.65':''}">
+        <td>
+          <div>${t.title}</div>
+          ${t.notes ? `<div style="font-size:12px;color:var(--text2);margin-top:2px">${t.notes}</div>` : ''}
+        </td>
+        <td><span style="font-size:12px;color:${pr.color}">${pr.label}</span></td>
+        <td style="color:${t.isOverdue?'var(--danger)':'var(--text2)'}">${dl}</td>
+        <td><span class="status-badge ${badge}">${label}</span></td>
+        <td>${t.comment ? `<span style="font-size:13px;color:var(--text2);font-style:italic">${t.comment}</span>` : '<span style="color:var(--text3);font-size:12px">—</span>'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn small secondary" style="margin-right:4px" onclick="openEditMyTask('${t.id}')">✏️</button>
+          ${t.status !== 'done' ? `<button class="btn small secondary" style="margin-right:4px" onclick="completeMyTask('${t.id}')">✓</button>` : ''}
+          <button class="btn small danger" onclick="deleteMyTask('${t.id}')">🗑</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function openMyTaskModal() {
+  document.getElementById('myTaskModalTitle').textContent = 'Новая задача';
+  document.getElementById('myTaskEditId').value = '';
+  document.getElementById('myTaskTitle').value = '';
+  document.getElementById('myTaskDeadline').value = '';
+  document.getElementById('myTaskPriority').value = 'medium';
+  document.getElementById('myTaskNotes').value = '';
+  document.getElementById('myTaskSaveBtn').textContent = 'Добавить';
+  openModal('modalMyTask');
+}
+
+async function openEditMyTask(taskId) {
+  const data = await sb('GET','tasks',null,`?id=eq.${taskId}`);
+  const t = data[0]; if (!t) return;
+  document.getElementById('myTaskModalTitle').textContent = 'Редактировать задачу';
+  document.getElementById('myTaskEditId').value = t.id;
+  document.getElementById('myTaskTitle').value = t.title;
+  document.getElementById('myTaskDeadline').value = t.deadline || '';
+  document.getElementById('myTaskPriority').value = t.priority || 'medium';
+  document.getElementById('myTaskNotes').value = t.notes || '';
+  document.getElementById('myTaskSaveBtn').textContent = 'Сохранить';
+  openModal('modalMyTask');
+}
+
+async function submitMyTask() {
+  const editId = document.getElementById('myTaskEditId').value;
+  const title = document.getElementById('myTaskTitle').value.trim();
+  const deadline = document.getElementById('myTaskDeadline').value;
+  const priority = document.getElementById('myTaskPriority').value;
+  const notes = document.getElementById('myTaskNotes').value.trim();
+  if (!title || !deadline) return alert('Заполни название и срок');
+  const month = deadline.substring(0,7);
+
+  if (editId) {
+    await sb('PATCH','tasks',{ title, deadline, priority, notes, month },`?id=eq.${editId}`);
+  } else {
+    await sb('POST','tasks',{ id:'task_'+Date.now(), employee_id:ADMIN_EMP_ID, employee_name:ADMIN_EMP_NAME, title, deadline, priority, notes, month, status:'pending', created_by:'admin' });
+  }
+  closeModal('modalMyTask');
+  loadMyAdminTasks();
+  loadDashboard();
+}
+
+async function completeMyTask(taskId) {
+  const comment = prompt('Комментарий к результату (необязательно):') || '';
+  await sb('PATCH','tasks',{ status:'done', comment, completed_at: new Date().toISOString() },`?id=eq.${taskId}`);
+  loadMyAdminTasks();
+  loadDashboard();
+}
+
+async function deleteMyTask(taskId) {
+  if (!confirm('Удалить задачу?')) return;
+  await sb('DELETE','tasks',null,`?id=eq.${taskId}`);
+  loadMyAdminTasks();
+  loadDashboard();
+}
+
+// ============================================
 // NAV
 // ============================================
 function showSection(name, btn) {
@@ -1198,6 +1444,7 @@ function showSection(name, btn) {
   if (name==='tasks') loadTasks();
   if (name==='checkins') loadCheckins();
   if (name==='employees') renderEmployeesList();
+  if (name==='mytasks') loadMyAdminTasks();
 }
 
 // ============================================
