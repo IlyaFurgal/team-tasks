@@ -137,6 +137,7 @@ textarea.input{resize:none;min-height:80px;margin-bottom:0}
     <button class="tab active" onclick="showTab('tasks',this)">📋 Задачи</button>
     <button class="tab" onclick="showTab('stats',this)">📊 Статистика</button>
     <button class="tab" onclick="showTab('checkin',this)">✍️ Отчёт</button>
+    <button class="tab" onclick="showTab('history',this)">📁 История</button>
   </div>
 
   <div class="content">
@@ -166,6 +167,14 @@ textarea.input{resize:none;min-height:80px;margin-bottom:0}
       <div id="statsContent"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
     </div>
 
+    <div id="tab-history" style="display:none">
+      <div id="myCheckinsContent"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
+    </div>
+
+    <div id="tab-history" style="display:none">
+      <div id="myCheckinsContent"><div class="loading"><div class="spinner"></div> Загрузка...</div></div>
+    </div>
+
     <div id="tab-checkin" style="display:none">
       <div class="checkin-card">
         <div class="checkin-title">Еженедельный отчёт</div>
@@ -179,6 +188,24 @@ textarea.input{resize:none;min-height:80px;margin-bottom:0}
         <button class="btn" style="margin-top:16px" onclick="submitCheckin()">Отправить отчёт</button>
         <div class="error-msg" id="checkinMsg"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Редактировать чекпоинт -->
+<div id="modalEditCheckin" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#181818;border:1px solid #2a2a2a;border-radius:20px;padding:28px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto">
+    <div style="font-family:var(--font-head);font-size:14px;font-weight:600;margin-bottom:20px">Редактировать отчёт</div>
+    <input type="hidden" id="editCheckinId">
+    <label class="form-label" style="margin-top:0">ЧТО СДЕЛАНО *</label>
+    <textarea class="input" id="editCiDone" style="min-height:80px;margin-bottom:0"></textarea>
+    <label class="form-label">ПЛАНЫ *</label>
+    <textarea class="input" id="editCiWillDo" style="min-height:80px;margin-bottom:0"></textarea>
+    <label class="form-label">ГДЕ НУЖНА ПОМОЩЬ</label>
+    <textarea class="input" id="editCiNeedHelp" style="min-height:60px;margin-bottom:0"></textarea>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn secondary" onclick="document.getElementById('modalEditCheckin').style.display='none'">Отмена</button>
+      <button class="btn" onclick="saveEditCheckin()">Сохранить</button>
     </div>
   </div>
 </div>
@@ -505,13 +532,91 @@ async function submitCheckin() {
 // Tabs
 function showTab(name, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-tasks').style.display='none';
-  document.getElementById('tab-stats').style.display='none';
-  document.getElementById('tab-checkin').style.display='none';
+  ['tasks','stats','checkin','history'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el) el.style.display='none';
+  });
   btn.classList.add('active');
   document.getElementById('tab-'+name).style.display='block';
   if (name==='stats') showStats('week', document.querySelector('.period-btn'));
+  if (name==='history') loadMyCheckins();
+}
+
+async function loadMyCheckins() {
+  const el = document.getElementById('myCheckinsContent');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
+
+  const checkins = await sb('GET','checkins',null,
+    `?employee_id=eq.${employee.id}&order=created_at.desc`);
+
+  if (!checkins.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2)">
+      <div style="font-size:36px;margin-bottom:12px">📋</div>
+      <div style="font-family:var(--font-head);font-size:14px;color:var(--text)">Отчётов пока нет</div>
+      <div style="font-size:13px;margin-top:6px">Заполни первый отчёт во вкладке «Отчёт»</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = checkins.map(c => {
+    const date = new Date(c.created_at).toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'});
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-family:var(--font-head);font-size:11px;color:var(--accent)">${date}</div>
+        <button onclick="openEditCheckin('${c.id}',\`${c.done.replace(/`/g,"'")}\`,\`${c.will_do.replace(/`/g,"'")}\`,\`${(c.need_help||'').replace(/`/g,"'")}\`)"
+          style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer">✏️ Редактировать</button>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:4px">ЧТО СДЕЛАНО</div>
+        <div style="font-size:14px;line-height:1.6">${c.done}</div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:4px">ПЛАНЫ</div>
+        <div style="font-size:14px;line-height:1.6">${c.will_do}</div>
+      </div>
+      ${c.need_help ? `<div>
+        <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:4px">НУЖНА ПОМОЩЬ</div>
+        <div style="font-size:14px;line-height:1.6">${c.need_help}</div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function openEditCheckin(id, done, willDo, needHelp) {
+  document.getElementById('editCheckinId').value = id;
+  document.getElementById('editCiDone').value = done;
+  document.getElementById('editCiWillDo').value = willDo;
+  document.getElementById('editCiNeedHelp').value = needHelp;
+  document.getElementById('modalEditCheckin').style.display = 'flex';
+}
+
+async function saveEditCheckin() {
+  const id = document.getElementById('editCheckinId').value;
+  const done = document.getElementById('editCiDone').value.trim();
+  const will_do = document.getElementById('editCiWillDo').value.trim();
+  const need_help = document.getElementById('editCiNeedHelp').value.trim();
+  if (!done || !will_do) return alert('Заполни обязательные поля');
+  await sb('PATCH','checkins',{ done, will_do, need_help },`?id=eq.${id}`);
+  document.getElementById('modalEditCheckin').style.display = 'none';
+  loadMyCheckins();
 }
 </script>
+<!-- MODAL: Редактировать чекпоинт -->
+<div id="modalEditCheckin" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#181818;border:1px solid #2a2a2a;border-radius:20px;padding:28px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto">
+    <div style="font-family:var(--font-head);font-size:14px;font-weight:600;margin-bottom:20px">Редактировать отчёт</div>
+    <input type="hidden" id="editCheckinId">
+    <label class="form-label" style="margin-top:0">ЧТО СДЕЛАНО *</label>
+    <textarea class="input" id="editCiDone" style="min-height:80px;margin-bottom:0"></textarea>
+    <label class="form-label">ПЛАНЫ *</label>
+    <textarea class="input" id="editCiWillDo" style="min-height:80px;margin-bottom:0"></textarea>
+    <label class="form-label">ГДЕ НУЖНА ПОМОЩЬ</label>
+    <textarea class="input" id="editCiNeedHelp" style="min-height:60px;margin-bottom:0"></textarea>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn secondary" onclick="document.getElementById('modalEditCheckin').style.display='none'">Отмена</button>
+      <button class="btn" onclick="saveEditCheckin()">Сохранить</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
