@@ -137,7 +137,7 @@ textarea.input{resize:none;min-height:80px;margin-bottom:0}
     <button class="tab active" onclick="showTab('tasks',this)">📋 Задачи</button>
     <button class="tab" onclick="showTab('stats',this)">📊 Статистика</button>
     <button class="tab" onclick="showTab('checkin',this)">✍️ Отчёт</button>
-    <button class="tab" onclick="showTab('history',this)">📁 История</button>
+    <button class="tab" onclick="showTab('history',this)">🗂 Архив</button>
   </div>
 
   <div class="content">
@@ -553,7 +553,7 @@ async function loadMyCheckins() {
     el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2)">
       <div style="font-size:36px;margin-bottom:12px">📋</div>
       <div style="font-family:var(--font-head);font-size:14px;color:var(--text)">Отчётов пока нет</div>
-      <div style="font-size:13px;margin-top:6px">Заполни первый отчёт во вкладке «Отчёт»</div>
+      <div style="font-size:13px;margin-top:6px">Заполни первый отчёт во вкладке «Отчёт» ✍️</div>
     </div>`;
     return;
   }
@@ -565,6 +565,8 @@ async function loadMyCheckins() {
         <div style="font-family:var(--font-head);font-size:11px;color:var(--accent)">${date}</div>
         <button onclick="openEditCheckin('${c.id}',\`${c.done.replace(/`/g,"'")}\`,\`${c.will_do.replace(/`/g,"'")}\`,\`${(c.need_help||'').replace(/`/g,"'")}\`)"
           style="background:none;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer">✏️ Редактировать</button>
+        <button onclick="deleteCheckin('${c.id}')"
+          style="background:none;border:1px solid #c94a4a44;color:#c94a4a;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer">🗑</button>
       </div>
       <div style="margin-bottom:10px">
         <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:4px">ЧТО СДЕЛАНО</div>
@@ -598,6 +600,12 @@ async function saveEditCheckin() {
   if (!done || !will_do) return alert('Заполни обязательные поля');
   await sb('PATCH','checkins',{ done, will_do, need_help },`?id=eq.${id}`);
   document.getElementById('modalEditCheckin').style.display = 'none';
+  loadMyCheckins();
+}
+
+async function deleteCheckin(id) {
+  if (!confirm('Удалить этот отчёт?')) return;
+  await sb('DELETE','checkins',null,`?id=eq.${id}`);
   loadMyCheckins();
 }
 </script>
