@@ -128,6 +128,9 @@ textarea.input{resize:none;min-height:80px;margin-bottom:0}
     <input type="text" class="input" id="empName" placeholder="Твоё имя">
     <input type="password" class="input" id="empPass" placeholder="Пароль" onkeydown="if(event.key==='Enter')empLogin()">
     <button class="btn" onclick="empLogin()">ВОЙТИ</button>
+    <div style="margin-top:16px">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtnLogin" style="margin:0 auto;display:block">🌙</button>
+    </div>
     <div class="error-msg" id="empLoginError"></div>
   </div>
 </div>
@@ -139,7 +142,7 @@ textarea.input{resize:none;min-height:80px;margin-bottom:0}
       <div class="app-object" id="greetingObject"></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtnHeader">🌙</button>
       <button class="logout-btn" onclick="empLogout()">⎋</button>
     </div>
   </header>
@@ -257,7 +260,11 @@ function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', next);
-  document.getElementById('themeBtn').textContent = next === 'light' ? '🌙' : '☀️';
+  const icon = next === 'light' ? '☀️' : '🌙';
+  ['themeBtnLogin','themeBtnHeader'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.textContent = icon;
+  });
   localStorage.setItem('emp_theme', next);
 }
 (function() {
@@ -265,8 +272,10 @@ function toggleTheme() {
   if (saved === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
     window.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.textContent = '☀️';
+      ['themeBtnLogin','themeBtnHeader'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.textContent = '☀️';
+      });
     });
   }
 })();
