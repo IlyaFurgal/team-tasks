@@ -139,6 +139,9 @@ tr:hover td{background:var(--surface2)}
     <div class="login-sub">Доступ только для руководителя</div>
     <input type="password" class="input" id="adminPass" placeholder="Пароль" onkeydown="if(event.key==='Enter')adminLogin()">
     <button class="btn" onclick="adminLogin()">ВОЙТИ</button>
+    <div style="margin-top:16px">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn" title="Переключить тему" style="margin:0 auto;display:block">🌙</button>
+    </div>
     <div class="error-msg" id="loginError"></div>
   </div>
 </div>
@@ -155,11 +158,8 @@ tr:hover td{background:var(--surface2)}
       <button class="nav-btn" onclick="showSection('strategy',this)">🎯 <span>Стратегия</span></button>
     </nav>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn" title="Переключить тему">🌙</button>
-      <div style="display:flex;gap:8px;align-items:center">
-      <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn" title="Переключить тему">🌙</button>
-      <button class="logout-btn" onclick="logout()">Выйти</button>
-    </div>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtnHeader" title="Переключить тему">🌙</button>
+      
   </header>
 
   <main class="main">
@@ -1089,17 +1089,23 @@ function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', next);
-  document.getElementById('themeToggleBtn').textContent = next === 'light' ? '🌙' : '☀️';
+  const icon = next === 'light' ? '☀️' : '🌙';
+  ['themeToggleBtn','themeToggleBtnHeader'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.textContent = icon;
+  });
   localStorage.setItem('theme', next);
 }
-// Apply saved theme
 (function() {
   const saved = localStorage.getItem('theme') || 'dark';
   if (saved === 'light') {
     document.documentElement.setAttribute('data-theme', 'light');
     window.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('themeToggleBtn');
-      if (btn) btn.textContent = '☀️';
+      const icon = '☀️';
+      ['themeToggleBtn','themeToggleBtnHeader'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.textContent = icon;
+      });
     });
   }
 })();
