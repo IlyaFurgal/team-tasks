@@ -7,10 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0f0f0f; --surface:#181818; --surface2:#222222; --border:#2a2a2a;
-  --accent:#c9a96e; --text:#f0ece4; --text2:#8a8278; --text3:#5a5550;
-  --done:#4a9e6b; --pending:#4a7ec9; --danger:#c94a4a;
+  --accent:#c9a96e;
+  --done:#3d8f5f; --pending:#3d6fb5; --danger:#c94a4a;
   --radius:12px; --font-head:'Unbounded',sans-serif; --font-body:'Golos Text',sans-serif;
+  --bg:#0f0f0f; --surface:#181818; --surface2:#222222; --border:#2a2a2a;
+  --text:#f0ece4; --text2:#8a8278; --text3:#5a5550;
+}
+[data-theme="light"] {
+  --bg:#f5f0e8; --surface:#ffffff; --surface2:#f0ebe0; --border:#e0d8cc;
+  --text:#1a1510; --text2:#6b5f50; --text3:#a09080;
+  --done:#2d7a4f; --pending:#2d5a9e; --danger:#b03030;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;max-width:480px;margin:0 auto}
@@ -38,6 +44,8 @@ textarea.input{resize:none;min-height:80px;margin-bottom:0}
 .app-greeting{font-family:var(--font-head);font-size:13px;font-weight:600}
 .app-object{font-size:11px;color:var(--accent);margin-top:2px;letter-spacing:1px}
 .logout-btn{background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:4px}
+.theme-toggle{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:16px;width:32px;height:32px;border-radius:8px;cursor:pointer;transition:all .2s}
+.theme-toggle:hover{border-color:var(--accent)}
 
 .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:61px;z-index:99}
 .tab{flex:1;background:none;border:none;color:var(--text2);font-family:var(--font-body);font-size:13px;padding:14px 8px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;-webkit-tap-highlight-color:transparent}
@@ -130,7 +138,10 @@ textarea.input{resize:none;min-height:80px;margin-bottom:0}
       <div class="app-greeting" id="greetingName">Привет!</div>
       <div class="app-object" id="greetingObject"></div>
     </div>
-    <button class="logout-btn" onclick="empLogout()">⎋</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      <button class="logout-btn" onclick="empLogout()">⎋</button>
+    </div>
   </header>
 
   <div class="tabs">
@@ -240,6 +251,25 @@ async function sb(method, table, body=null, query='') {
   if (method==='DELETE'||method==='PATCH') return { ok:true };
   return res.json();
 }
+
+// THEME
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('emp_theme', next);
+}
+(function() {
+  const saved = localStorage.getItem('emp_theme') || 'dark';
+  if (saved === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('themeBtn');
+      if (btn) btn.textContent = '☀️';
+    });
+  }
+})();
 
 async function empLogin() {
   const name = document.getElementById('empName').value.trim();
