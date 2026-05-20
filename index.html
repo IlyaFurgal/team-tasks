@@ -7,10 +7,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0f0f0f; --surface:#181818; --surface2:#222222; --border:#2a2a2a;
-  --accent:#c9a96e; --accent2:#8b6914; --text:#f0ece4; --text2:#8a8278; --text3:#5a5550;
-  --done:#4a9e6b; --warn:#c97b3a; --danger:#c94a4a; --pending:#4a7ec9;
+  --accent:#c9a96e; --accent2:#8b6914;
+  --done:#3d8f5f; --warn:#c97b3a; --danger:#c94a4a; --pending:#3d6fb5;
   --radius:12px; --font-head:'Unbounded',sans-serif; --font-body:'Golos Text',sans-serif;
+  /* Dark theme (default) */
+  --bg:#0f0f0f; --surface:#181818; --surface2:#222222; --border:#2a2a2a;
+  --text:#f0ece4; --text2:#8a8278; --text3:#5a5550;
+}
+[data-theme="light"] {
+  --bg:#f5f0e8; --surface:#ffffff; --surface2:#f0ebe0; --border:#e0d8cc;
+  --text:#1a1510; --text2:#6b5f50; --text3:#a09080;
+  --done:#2d7a4f; --pending:#2d5a9e; --danger:#b03030; --warn:#b06020;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh}
@@ -39,6 +46,8 @@ textarea.input{resize:vertical;min-height:80px}
 .nav-btn.active{color:var(--accent);background:var(--surface2)}
 .logout-btn{background:none;border:1px solid var(--border);color:var(--text2);font-family:var(--font-body);font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .2s}
 .logout-btn:hover{color:var(--text);border-color:var(--text3)}
+.theme-toggle{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:16px;width:36px;height:36px;border-radius:8px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.theme-toggle:hover{border-color:var(--accent);transform:rotate(20deg)}
 .main{padding:32px 24px;max-width:1200px;margin:0 auto}
 .section{display:none}.section.active{display:block}
 .section-title{font-family:var(--font-head);font-size:18px;font-weight:600;margin-bottom:24px}
@@ -145,7 +154,12 @@ tr:hover td{background:var(--surface2)}
       <button class="nav-btn" onclick="showSection('employees',this)">👥 <span>Команда</span></button>
       <button class="nav-btn" onclick="showSection('strategy',this)">🎯 <span>Стратегия</span></button>
     </nav>
-    <button class="logout-btn" onclick="logout()">Выйти</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn" title="Переключить тему">🌙</button>
+      <div style="display:flex;gap:8px;align-items:center">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeToggleBtn" title="Переключить тему">🌙</button>
+      <button class="logout-btn" onclick="logout()">Выйти</button>
+    </div>
   </header>
 
   <main class="main">
@@ -633,6 +647,7 @@ function renderTaskTable(tasks) {
         <td style="white-space:nowrap">
           <button class="btn small secondary" style="margin-right:4px" onclick="openEditTaskModal('${t.id}')">✏️</button>
           <button class="btn small secondary" style="margin-right:4px" onclick="openCommentsModal('${t.id}','${t.title.replace(/'/g,"\\'")}','${t.employee_name}')">💬</button>
+          ${t.status==='done'?`<button class="btn small secondary" style="margin-right:4px;color:var(--warn)" onclick="undoCompleteTask('${t.id}')" title="Отменить выполнение">↩️</button>`:''}
           <button class="btn small danger" onclick="deleteTask('${t.id}')">🗑</button>
         </td>
       </tr>`;
@@ -1067,6 +1082,42 @@ async function importFromExcel(event, isMyTasks=false) {
   alert(`✅ Импортировано: ${imported} задач${errors.length?'\n⚠️ Ошибок: '+errors.length:''}`);
   if (isMyTasks) { loadMyAdminTasks(); } else { loadTasks(); }
   loadDashboard();
+}
+
+// THEME
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeToggleBtn').textContent = next === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('theme', next);
+}
+// Apply saved theme
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  if (saved === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = '☀️';
+    });
+  }
+})();
+
+// UNDO COMPLETE TASK
+async function undoCompleteTask(taskId) {
+  // Open modal to pick new deadline
+  const newDeadline = prompt('Задача будет возвращена в работу.\nУкажи новый срок (ГГГГ-ММ-ДД):');
+  if (!newDeadline) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(newDeadline)) return alert('Неверный формат даты. Используй ГГГГ-ММ-ДД');
+  await sb('PATCH','tasks',{
+    status:'pending',
+    comment:'',
+    completed_at:null,
+    deadline: newDeadline,
+    month: newDeadline.substring(0,7)
+  },`?id=eq.${taskId}`);
+  loadTasks(); loadDashboard();
 }
 
 // NAV
