@@ -406,73 +406,98 @@ let currentTaskId = null;
 
 // PocketBase API
 // Конвертер Supabase-стиля query в PocketBase filter
+// Конвертер Supabase query → PocketBase параметры
 function sbQueryToPb(query) {
   if (!query) return {};
   const params = {};
   const qs = query.startsWith('?') ? query.slice(1) : query;
   const filters = [];
   for (const part of qs.split('&')) {
-    const [key, val] = part.split('=');
+    const eqIdx = part.indexOf('=');
+    if (eqIdx < 0) continue;
+    const key = part.substring(0, eqIdx);
+    const val = decodeURIComponent(part.substring(eqIdx + 1));
     if (!key || !val) continue;
-    const decoded = decodeURIComponent(val);
-    if (key === 'order') {
-      const [field, dir] = decoded.split('.');
-      params.sort = (dir === 'desc' ? '-' : '') + field;
+    // Уже готовые PocketBase параметры — передаём напрямую
+    if (key === 'filter' || key === 'sort' || key === 'fields' || key === 'perPage') {
+      params[key] = val;
+    } else if (key === 'order') {
+      const dotIdx = val.lastIndexOf('.');
+      if (dotIdx > 0) {
+        const field = val.substring(0, dotIdx);
+        const dir = val.substring(dotIdx + 1);
+        params.sort = (dir === 'desc' ? '-' : '') + field;
+      } else {
+        params.sort = val;
+      }
     } else if (key === 'select') {
-      params.fields = decoded;
+      params.fields = val;
     } else if (key === 'limit') {
-      params.perPage = decoded;
+      params.perPage = val;
     } else {
-      // field=eq.value, field=gte.value etc
-      const m = key.match(/^(.+)$/);
-      const vm = decoded.match(/^(eq|neq|gt|gte|lt|lte|like|ilike)\.(.+)$/);
-      if (vm) {
-        const [, op, v] = vm;
-        const pbOp = {eq:'=',neq:'!=',gt:'>',gte:'>=',lt:'<',lte:'<=',like:'~',ilike:'~'}[op]||'=';
-        const quoted = (v === 'true' || v === 'false') ? v : `"${v}"`;
-        filters.push(`${key}${pbOp}${quoted}`);
+      // Supabase формат: field=op.value
+      const dotIdx = val.indexOf('.');
+      if (dotIdx > 0) {
+        const op = val.substring(0, dotIdx);
+        const v = val.substring(dotIdx + 1);
+        const pbOp = {eq:'=',neq:'!=',gt:'>',gte:'>=',lt:'<',lte:'<=',like:'~',ilike:'~'}[op];
+        if (pbOp) {
+          const quoted = (v === 'true' || v === 'false') ? v : ('"' + v + '"');
+          filters.push(key + pbOp + quoted);
+        }
       }
     }
   }
-  if (filters.length) params.filter = filters.join('&&');
+  if (filters.length) {
+    params.filter = params.filter ? params.filter + '&&' + filters.join('&&') : filters.join('&&');
+  }
   return params;
 }
 
 async function pb(method, table, body=null, query='') {
   const pbParams = sbQueryToPb(query);
-  let url = `${PB_URL}/api/collections/${table}/records`;
-  
-  // Если есть filter с id=, это запрос по конкретной записи
+  let url = PB_URL + '/api/collections/' + table + '/records';
+
+  // PATCH/DELETE по id
   const idMatch = query.match(/[?&]id=eq\.([^&]+)/);
-  
   if ((method === 'PATCH' || method === 'DELETE') && idMatch) {
     const id = decodeURIComponent(idMatch[1]);
-    url = `${PB_URL}/api/collections/${table}/records/${id}`;
-    const opts = { method: method === 'PATCH' ? 'PATCH' : 'DELETE', headers: {'Content-Type':'application/json'} };
+    url = PB_URL + '/api/collections/' + table + '/records/' + id;
+    const opts = {
+      method: method === 'PATCH' ? 'PATCH' : 'DELETE',
+      headers: {'Content-Type': 'application/json'}
+    };
     if (body) opts.body = JSON.stringify(body);
     await fetch(url, opts);
-    return { ok: true };
+    return {ok: true};
   }
-  
+
   if (method === 'GET') {
-    const qStr = Object.entries(pbParams).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
-    if (qStr) url += '?' + qStr + '&perPage=500';
-    else url += '?perPage=500';
+    const parts = [];
+    for (const [k, v] of Object.entries(pbParams)) {
+      parts.push(k + '=' + encodeURIComponent(v));
+    }
+    parts.push('perPage=500');
+    url += '?' + parts.join('&');
     const res = await fetch(url);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message||'DB error');
+    if (!res.ok) throw new Error(data.message || 'DB error');
     return data.items || [];
   }
-  
+
   if (method === 'POST') {
-    const opts = { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) };
+    const opts = {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    };
     const res = await fetch(url, opts);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message||'DB error');
+    if (!res.ok) throw new Error(data.message || 'DB error');
     return [data];
   }
-  
-  return { ok: true };
+
+  return {ok: true};
 }
 
 // Алиас для совместимости
@@ -532,8 +557,10 @@ async function init() {
 
 // EMPLOYEES
 async function loadEmployees() {
-  const data = await sb('GET','employees',null,'?filter=active%3Dtrue&sort=name');
-  employees = data;
+  // Прямой запрос к PocketBase без конвертера
+  const res = await fetch(`${PB_URL}/api/collections/employees/records?filter=active%3Dtrue&sort=name&perPage=500`);
+  const json = await res.json();
+  employees = json.items || [];
   renderEmployeeSelects();
   renderEmployeesList();
 }
