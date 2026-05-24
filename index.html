@@ -532,7 +532,7 @@ async function init() {
 
 // EMPLOYEES
 async function loadEmployees() {
-  const data = await sb('GET','employees',null,'?active=eq.true&order=name');
+  const data = await sb('GET','employees',null,'?filter=active%3Dtrue&sort=name');
   employees = data;
   renderEmployeeSelects();
   renderEmployeesList();
