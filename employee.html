@@ -244,59 +244,86 @@ function sbQueryToPb(query) {
   const qs = query.startsWith('?') ? query.slice(1) : query;
   const filters = [];
   for (const part of qs.split('&')) {
-    const [key, val] = part.split('=');
+    const eqIdx = part.indexOf('=');
+    if (eqIdx < 0) continue;
+    const key = part.substring(0, eqIdx);
+    const val = decodeURIComponent(part.substring(eqIdx + 1));
     if (!key || !val) continue;
-    const decoded = decodeURIComponent(val);
-    if (key === 'order') {
-      const [field, dir] = decoded.split('.');
-      params.sort = (dir === 'desc' ? '-' : '') + field;
+    if (key === 'filter' || key === 'sort' || key === 'fields' || key === 'perPage') {
+      params[key] = val;
+    } else if (key === 'order') {
+      const dotIdx = val.lastIndexOf('.');
+      if (dotIdx > 0) {
+        const field = val.substring(0, dotIdx);
+        const dir = val.substring(dotIdx + 1);
+        params.sort = (dir === 'desc' ? '-' : '') + field;
+      } else {
+        params.sort = val;
+      }
+    } else if (key === 'select') {
+      params.fields = val;
     } else {
-      const vm = decoded.match(/^(eq|neq|gt|gte|lt|lte|like|ilike)\.(.+)$/);
-      if (vm) {
-        const [, op, v] = vm;
-        const pbOp = {eq:'=',neq:'!=',gt:'>',gte:'>=',lt:'<',lte:'<=',like:'~',ilike:'~'}[op]||'=';
-        const quoted = (v === 'true' || v === 'false') ? v : '"' + v + '"';
-        filters.push(key + pbOp + quoted);
+      const dotIdx = val.indexOf('.');
+      if (dotIdx > 0) {
+        const op = val.substring(0, dotIdx);
+        const v = val.substring(dotIdx + 1);
+        const pbOp = {eq:'=',neq:'!=',gt:'>',gte:'>=',lt:'<',lte:'<=',like:'~',ilike:'~'}[op];
+        if (pbOp) {
+          const quoted = (v === 'true' || v === 'false') ? v : ('"' + v + '"');
+          filters.push(key + pbOp + quoted);
+        }
       }
     }
   }
-  if (filters.length) params.filter = filters.join('&&');
+  if (filters.length) {
+    params.filter = params.filter ? params.filter + '&&' + filters.join('&&') : filters.join('&&');
+  }
   return params;
 }
 
 async function sb(method, table, body=null, query='') {
   const pbParams = sbQueryToPb(query);
   let url = PB_URL + '/api/collections/' + table + '/records';
-  
+
   const idMatch = query.match(/[?&]id=eq\.([^&]+)/);
-  
   if ((method === 'PATCH' || method === 'DELETE') && idMatch) {
     const id = decodeURIComponent(idMatch[1]);
     url = PB_URL + '/api/collections/' + table + '/records/' + id;
-    const opts = { method: method === 'PATCH' ? 'PATCH' : 'DELETE', headers: {'Content-Type':'application/json'} };
+    const opts = {
+      method: method === 'PATCH' ? 'PATCH' : 'DELETE',
+      headers: {'Content-Type': 'application/json'}
+    };
     if (body) opts.body = JSON.stringify(body);
     await fetch(url, opts);
-    return { ok: true };
+    return {ok: true};
   }
-  
+
   if (method === 'GET') {
-    const qStr = Object.entries(pbParams).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-    url += '?' + (qStr ? qStr + '&' : '') + 'perPage=500';
+    const parts = [];
+    for (const [k, v] of Object.entries(pbParams)) {
+      parts.push(k + '=' + encodeURIComponent(v));
+    }
+    parts.push('perPage=500');
+    url += '?' + parts.join('&');
     const res = await fetch(url);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message||'DB error');
+    if (!res.ok) throw new Error(data.message || 'DB error');
     return data.items || [];
   }
-  
+
   if (method === 'POST') {
-    const opts = { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) };
+    const opts = {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    };
     const res = await fetch(url, opts);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message||'DB error');
+    if (!res.ok) throw new Error(data.message || 'DB error');
     return [data];
   }
-  
-  return { ok: true };
+
+  return {ok: true};
 }
 
 // THEME
@@ -330,8 +357,10 @@ async function empLogin() {
   const err = document.getElementById('empLoginError');
   if (!name||!pass) { err.textContent='Введи имя и пароль'; return; }
 
-  const encodedName = encodeURIComponent(`name="${name}"&&active=true`);
-  const data = await sb('GET','employees',null,`?filter=${encodedName}`);
+  const filterVal = encodeURIComponent('name="' + name + '"&&active=true');
+  const empRes = await fetch(`${PB_URL}/api/collections/employees/records?filter=${filterVal}&perPage=10`);
+  const empJson = await empRes.json();
+  const data = empJson.items || [];
   if (!data.length) { err.textContent='Неверное имя или пароль'; return; }
   const emp = data[0];
   if (String(emp.password) !== String(pass)) { err.textContent='Неверное имя или пароль'; return; }
