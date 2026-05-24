@@ -330,7 +330,8 @@ async function empLogin() {
   const err = document.getElementById('empLoginError');
   if (!name||!pass) { err.textContent='Введи имя и пароль'; return; }
 
-  const data = await sb('GET','employees',null,`?name=eq.${encodeURIComponent(name)}&active=eq.true`);
+  const encodedName = encodeURIComponent(`name="${name}"&&active=true`);
+  const data = await sb('GET','employees',null,`?filter=${encodedName}`);
   if (!data.length) { err.textContent='Неверное имя или пароль'; return; }
   const emp = data[0];
   if (String(emp.password) !== String(pass)) { err.textContent='Неверное имя или пароль'; return; }
