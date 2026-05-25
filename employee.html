@@ -301,7 +301,14 @@ async function sb(method, table, body=null, query='') {
   if (method === 'GET') {
     const parts = [];
     for (const [k, v] of Object.entries(pbParams)) {
-      parts.push(k + '=' + encodeURIComponent(v));
+      // sort и filter не кодируем полностью - только спецсимволы кроме запятой и оператора
+      if (k === 'sort') {
+        parts.push('sort=' + v);
+      } else if (k === 'filter') {
+        parts.push('filter=' + encodeURIComponent(v));
+      } else {
+        parts.push(k + '=' + encodeURIComponent(v));
+      }
     }
     // Загружаем все страницы
     let page = 1;
