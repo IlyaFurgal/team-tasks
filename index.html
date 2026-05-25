@@ -477,12 +477,20 @@ async function pb(method, table, body=null, query='') {
     for (const [k, v] of Object.entries(pbParams)) {
       parts.push(k + '=' + encodeURIComponent(v));
     }
-    parts.push('perPage=500');
-    url += '?' + parts.join('&');
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'DB error');
-    return data.items || [];
+    // Загружаем все страницы
+    let page = 1;
+    let allItems = [];
+    while (true) {
+      const pageStr = parts.concat(['perPage=200', 'page=' + page]).join('&');
+      const res = await fetch(url + '?' + pageStr);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'DB error');
+      const items = data.items || [];
+      allItems = allItems.concat(items);
+      if (page >= data.totalPages || items.length === 0) break;
+      page++;
+    }
+    return allItems;
   }
 
   if (method === 'POST') {
@@ -693,7 +701,7 @@ async function loadTasks() {
   const el=document.getElementById('tasksContent');
   el.innerHTML='<div class="loading"><div class="spinner"></div> Загрузка...</div>';
   try {
-    let query='?order=deadline.asc,priority.asc';
+    let query='?sort=deadline,priority';
     if (empId) query+=`&employee_id=eq.${empId}`;
     const allTasks=await sb('GET','tasks',null,query);
     const today=new Date().toISOString().substring(0,10);
@@ -803,11 +811,11 @@ async function openCommentsModal(taskId,title,empName) {
 }
 async function renderComments() {
   const el=document.getElementById('commentsThread');
-  const comments=await sb('GET','task_comments',null,`?task_id=eq.${currentTaskId}&order=created_at.asc`);
+  const comments=await sb('GET','task_comments',null,`?task_id=eq.${currentTaskId}&sort=created`);
   if (!comments.length) { el.innerHTML='<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">Комментариев пока нет</div>'; return; }
   el.innerHTML=comments.map(c=>`
     <div class="comment-item ${c.author_role}">
-      <div class="comment-meta">${c.author} · ${new Date(c.created_at).toLocaleDateString('ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="comment-meta">${c.author} · ${new Date(c.created||c.created_at).toLocaleDateString('ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
       <div class="comment-body">${c.text}</div>
     </div>`).join('');
   el.scrollTop=el.scrollHeight;
@@ -824,7 +832,7 @@ async function loadCheckins() {
   const empId=document.getElementById('filterCheckinEmployee').value;
   const el=document.getElementById('checkinsContent');
   el.innerHTML='<div class="loading"><div class="spinner"></div> Загрузка...</div>';
-  let query='?order=created_at.desc';
+  let query='?sort=-created';
   if (empId) query+=`&employee_id=eq.${empId}`;
   const checkins=await sb('GET','checkins',null,query);
   if (!checkins.length) { el.innerHTML=emptyState('📋','Чекпоинтов пока нет','Они появятся после еженедельных отчётов сотрудников'); return; }
@@ -832,7 +840,7 @@ async function loadCheckins() {
     <div class="checkin-card">
       <div class="checkin-header">
         <span class="checkin-who">${c.employee_name}</span>
-        <span class="checkin-date">${new Date(c.created_at).toLocaleDateString('ru',{day:'numeric',month:'long'})}</span>
+        <span class="checkin-date">${new Date(c.created||c.created_at).toLocaleDateString('ru',{day:'numeric',month:'long'})}</span>
       </div>
       <div class="checkin-block"><div class="checkin-block-label">Что сделано</div><div class="checkin-block-text">${c.done}</div></div>
       <div class="checkin-block"><div class="checkin-block-label">Планы на неделю</div><div class="checkin-block-text">${c.will_do}</div></div>
@@ -871,7 +879,7 @@ async function loadMyAdminTasks() {
   const el=document.getElementById('myTasksContent');
   el.innerHTML='<div class="loading"><div class="spinner"></div> Загрузка...</div>';
   try {
-    const allTasks=await sb('GET','tasks',null,`?employee_id=eq.${ADMIN_EMP_ID}&order=deadline.asc`);
+    const allTasks=await sb('GET','tasks',null,`?employee_id=eq.${ADMIN_EMP_ID}&sort=deadline`);
     const today=new Date().toISOString().substring(0,10);
     const current=allTasks.filter(t=>t.month===month);
     const carried=allTasks.filter(t=>t.month<month&&t.status!=='done');
@@ -972,9 +980,9 @@ async function generateReport() {
   document.getElementById('reportLoading').style.display='flex';
   document.getElementById('reportPreview').style.display='none';
   try {
-    const allTasksRaw=await sb('GET','tasks',null,'?order=employee_name.asc,deadline.asc');
+    const allTasksRaw=await sb('GET','tasks',null,'?sort=employee_name,deadline');
     const tasks=allTasksRaw.filter(t=>t.month>=from&&t.month<=to);
-    const checkins=await sb('GET','checkins',null,`?created_at=gte.${from}-01&order=employee_name.asc,created_at.desc`);
+    const checkins=await sb('GET','checkins',null,`?filter=created>="${from}-01"&sort=employee_name,-created`);
     const now=new Date();
     const today=now.toISOString().substring(0,10);
     const lines=[];
@@ -1027,7 +1035,7 @@ async function generateReport() {
       for (const c of checkins) { if (!lastCheckins[c.employee_id]) lastCheckins[c.employee_id]=c; }
       for (const c of Object.values(lastCheckins)) {
         lines.push('');
-        lines.push(`> ${c.employee_name} (последний отчёт ${new Date(c.created_at).toLocaleDateString('ru',{day:'numeric',month:'short'})})`);
+        lines.push(`> ${c.employee_name} (последний отчёт ${new Date(c.created||c.created_at).toLocaleDateString('ru',{day:'numeric',month:'short'})})`);
         lines.push(`  Сделано: ${c.done}`);
         lines.push(`  Планы:   ${c.will_do}`);
         if (c.need_help) lines.push(`  Помощь:  ${c.need_help}`);
