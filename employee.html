@@ -303,12 +303,20 @@ async function sb(method, table, body=null, query='') {
     for (const [k, v] of Object.entries(pbParams)) {
       parts.push(k + '=' + encodeURIComponent(v));
     }
-    parts.push('perPage=500');
-    url += '?' + parts.join('&');
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'DB error');
-    return data.items || [];
+    // Загружаем все страницы
+    let page = 1;
+    let allItems = [];
+    while (true) {
+      const pageStr = parts.concat(['perPage=200', 'page=' + page]).join('&');
+      const res = await fetch(url + '?' + pageStr);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'DB error');
+      const items = data.items || [];
+      allItems = allItems.concat(items);
+      if (page >= data.totalPages || items.length === 0) break;
+      page++;
+    }
+    return allItems;
   }
 
   if (method === 'POST') {
@@ -382,7 +390,7 @@ function enterApp(emp) {
 async function checkCheckinRequest() {
   try {
     const requests = await sb('GET','checkin_requests',null,
-      `?employee_id=eq.${employee.id}&seen=eq.false&order=created_at.desc`);
+      `?employee_id=eq.${employee.id}&seen=eq.false&sort=-created`);
     if (!requests.length) return;
     
     const req = requests[0];
@@ -440,7 +448,7 @@ window.addEventListener('DOMContentLoaded', () => {
 async function loadMyTasks() {
   const el = document.getElementById('tasksList');
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
-  allTasks = await sb('GET','tasks',null,`?employee_id=eq.${employee.id}&order=deadline.asc`);
+  allTasks = await sb('GET','tasks',null,`?employee_id=eq.${employee.id}&sort=deadline`);
   renderTasks();
 }
 
@@ -543,7 +551,7 @@ async function toggleComments(taskId) {
   const el = document.getElementById('comments-'+taskId);
   if (el.style.display==='none') {
     el.style.display = 'block';
-    const comments = await sb('GET','task_comments',null,`?task_id=eq.${taskId}&order=created_at.asc`);
+    const comments = await sb('GET','task_comments',null,`?task_id=eq.${taskId}&sort=created`);
     if (!comments.length) {
       el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:8px 0">Нет комментариев</div>
         <div class="add-note-row">
@@ -573,7 +581,7 @@ async function submitNote(taskId) {
   await sb('POST','task_comments',{ task_id:taskId, author:employee.name, author_role:'employee', text });
   input.value = '';
   // Refresh comments
-  const comments = await sb('GET','task_comments',null,`?task_id=eq.${taskId}&order=created_at.asc`);
+  const comments = await sb('GET','task_comments',null,`?task_id=eq.${taskId}&sort=created`);
   const el = document.getElementById('comments-'+taskId);
   el.innerHTML = comments.map(c => `
     <div class="task-comment-item ${c.author_role}">
@@ -660,7 +668,7 @@ async function loadMyCheckins() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div> Загрузка...</div>';
 
   const checkins = await sb('GET','checkins',null,
-    `?employee_id=eq.${employee.id}&order=created_at.desc`);
+    `?employee_id=eq.${employee.id}&sort=-created`);
 
   if (!checkins.length) {
     el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text2)">
@@ -672,7 +680,7 @@ async function loadMyCheckins() {
   }
 
   el.innerHTML = checkins.map(c => {
-    const date = new Date(c.created_at).toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'});
+    const date = new Date(c.created||c.created_at).toLocaleDateString('ru',{day:'numeric',month:'long',year:'numeric'});
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div style="font-family:var(--font-head);font-size:11px;color:var(--accent)">${date}</div>
