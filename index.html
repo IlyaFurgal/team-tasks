@@ -880,19 +880,17 @@ async function ensureAdminEmployee() {
   }
 }
 async function loadMyAdminTasks() {
-  const month=document.getElementById('myTasksMonth').value;
   const statusFilter=document.getElementById('myTasksStatus').value;
   const el=document.getElementById('myTasksContent');
   el.innerHTML='<div class="loading"><div class="spinner"></div> Загрузка...</div>';
   try {
     const allTasks=await sb('GET','tasks',null,`?employee_id=eq.${ADMIN_EMP_ID}&sort=deadline`);
     const today=new Date().toISOString().substring(0,10);
-    const current=allTasks.filter(t=>t.month===month);
-    const carried=allTasks.filter(t=>t.month<month&&t.status!=='done');
-    let tasks=current.map(t=>({...t,isOverdue:t.status!=='done'&&t.deadline&&t.deadline<today}));
+    let tasks=allTasks.map(t=>({...t,isOverdue:t.status!=='done'&&t.deadline&&t.deadline<today}));
     if (statusFilter==='done') tasks=tasks.filter(t=>t.status==='done');
     else if (statusFilter==='pending') tasks=tasks.filter(t=>t.status!=='done'&&!t.isOverdue);
     else if (statusFilter==='overdue') tasks=tasks.filter(t=>t.isOverdue);
+    if (!tasks.length) { el.innerHTML=emptyState('👤','Задач нет','Добавь задачу через кнопку выше'); return; }
     tasks.sort((a,b)=>{
       if (!statusFilter) {
         if (a.status==='done'&&b.status!=='done') return 1;
@@ -902,9 +900,24 @@ async function loadMyAdminTasks() {
       if (da!==db) return da<db?-1:1;
       return (PRIORITY[a.priority]?.order??2)-(PRIORITY[b.priority]?.order??2);
     });
-    if (!tasks.length&&!carried.length) { el.innerHTML=emptyState('👤','Задач нет','Добавь задачу через кнопку выше'); return; }
-    el.innerHTML=renderMyTaskTable(tasks)+
-      (carried.length&&!statusFilter?`<div class="carried-section"><div class="carried-label">⏭ Переходящие — ${carried.length}</div>${renderMyTaskTable(carried.map(t=>({...t,isOverdue:t.deadline&&t.deadline<today})))}</div>`:'');
+    const months=[...new Set(tasks.map(t=>t.month))].sort();
+    const MONTH_NAMES=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+    let html='';
+    for (const month of months) {
+      const monthTasks=tasks.filter(t=>t.month===month);
+      const [year,mon]=month.split('-');
+      const monthLabel=MONTH_NAMES[parseInt(mon)-1]+' '+year;
+      const doneCount=monthTasks.filter(t=>t.status==='done').length;
+      html+=`<div style="margin-bottom:28px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="font-family:var(--font-head);font-size:12px;color:var(--accent);letter-spacing:1px">${monthLabel.toUpperCase()}</div>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <div style="font-size:12px;color:var(--text3)">${doneCount}/${monthTasks.length}</div>
+        </div>
+        ${renderMyTaskTable(monthTasks)}
+      </div>`;
+    }
+    el.innerHTML=html;
   } catch(e) { el.innerHTML=emptyState('⚠️','Ошибка',e.message); }
 }
 function renderMyTaskTable(tasks) {
