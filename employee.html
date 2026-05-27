@@ -497,6 +497,7 @@ function renderTasks() {
           <div class="task-meta">
             <span>${pr.icon} ${pr.label}</span>
             ${dl ? `<span class="task-deadline ${isOverdue?'overdue':''}">· 📅 ${dl}${isOverdue?' · просрочено':''}</span>` : ''}
+            ${isDone && t.completed_at ? `<span style="color:var(--done);font-size:12px">· ✅ закрыта ${new Date(t.completed_at).toLocaleDateString('ru',{day:'numeric',month:'short'})}</span>` : ''}
             ${t.created_by==='employee' ? '<span style="color:var(--accent);font-size:11px">· моя задача</span>' : ''}
           </div>
           ${t.notes ? `<div class="task-notes">${t.notes}</div>` : ''}
