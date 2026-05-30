@@ -1002,6 +1002,7 @@ async function generateReport() {
     const allTasksRaw=await sb('GET','tasks',null,'?sort=employee_name,deadline');
     const tasks=allTasksRaw.filter(t=>t.month>=from&&t.month<=to);
     const checkins=await sb('GET','checkins',null,`?filter=created>="${from}-01"&sort=employee_name,-created`);
+    const allComments=await sb('GET','task_comments',null,'?sort=created');
     const now=new Date();
     const today=now.toISOString().substring(0,10);
     const lines=[];
@@ -1038,14 +1039,50 @@ async function generateReport() {
         const monthTasks=empTasks.filter(t=>t.month===month);
         lines.push(`  ${month}:`);
         for (const t of monthTasks) {
-          const si=t.status==='done'?'✓':t.deadline<today&&t.status!=='done'?'!':'○';
+          const si=t.status==='done'?'✓':t.deadline&&t.deadline<today&&t.status!=='done'?'!':'○';
           const pr={critical:'🔴',high:'🟠',medium:'🟡',low:'🟢'}[t.priority]||'🟡';
           const dl=t.deadline?new Date(t.deadline+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
           const cp=t.comment?' | Итог: '+t.comment:'';
           lines.push(`  [${si}] ${pr} ${t.title}${dl?' - '+dl:''}${cp}`);
+          const taskComments=allComments.filter(c=>c.task_id===t.id);
+          for (const c of taskComments) {
+            const who=c.author_role==='admin'?'Роман':c.author_role==='nadezda'?'Надежда':c.author;
+            const date=c.created?new Date(c.created).toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
+            lines.push(`       💬 ${who}${date?' ('+date+')':''}: ${c.text}`);
+          }
         }
       }
     }
+    // ЗАДАЧИ РОМАНА
+    const romanTasks=allTasksRaw.filter(t=>t.employee_id===ADMIN_EMP_ID&&t.month>=from&&t.month<=to);
+    if (romanTasks.length) {
+      lines.push(''); lines.push('');
+      lines.push('ЗАДАЧИ РОМАНА');
+      lines.push('-------------------------------------------');
+      const romanDone=romanTasks.filter(t=>t.status==='done').length;
+      const romanOverdue=romanTasks.filter(t=>t.status!=='done'&&t.deadline&&t.deadline<today).length;
+      const romanPct=romanTasks.length?Math.round(romanDone/romanTasks.length*100):0;
+      lines.push(`  Задач: ${romanTasks.length} | Выполнено: ${romanDone} (${romanPct}%) | Просрочено: ${romanOverdue}`);
+      lines.push('');
+      const romanMonths=[...new Set(romanTasks.map(t=>t.month))].sort();
+      for (const month of romanMonths) {
+        const monthTasks=romanTasks.filter(t=>t.month===month);
+        lines.push(`  ${month}:`);
+        for (const t of monthTasks) {
+          const si=t.status==='done'?'✓':t.deadline&&t.deadline<today&&t.status!=='done'?'!':'○';
+          const pr={critical:'🔴',high:'🟠',medium:'🟡',low:'🟢'}[t.priority]||'🟡';
+          const dl=t.deadline?new Date(t.deadline+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
+          const cp=t.comment?' | Итог: '+t.comment:'';
+          lines.push(`  [${si}] ${pr} ${t.title}${dl?' - '+dl:''}${cp}`);
+          const taskComments=allComments.filter(c=>c.task_id===t.id);
+          for (const c of taskComments) {
+            const date=c.created?new Date(c.created).toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
+            lines.push(`       💬 ${c.author}${date?' ('+date+')':''}: ${c.text}`);
+          }
+        }
+      }
+    }
+    // ЕЖЕНЕДЕЛЬНЫЕ ОТЧЁТЫ
     if (checkins.length) {
       lines.push(''); lines.push('');
       lines.push('ЕЖЕНЕДЕЛЬНЫЕ ОТЧЁТЫ');
