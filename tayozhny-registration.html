@@ -55,6 +55,7 @@
     border-radius:9px;color:var(--green-dark);
     margin-bottom:16px;transition:border-color .15s,box-shadow .15s;
   }
+  input::placeholder{color:#9a9580;}
   input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,74,.25);}
   button{
     width:100%;background:var(--gold);color:var(--green-dark);
@@ -65,7 +66,7 @@
   button:hover{background:var(--gold-dark);}
   button:active{transform:scale(.99);}
   button:disabled{opacity:.6;cursor:default;}
-  .hint{text-align:center;font-size:12px;color:var(--muted);margin:14px 0 0;}
+  .hint{text-align:center;font-size:12px;color:var(--muted);margin:14px 0 0;line-height:1.5;}
   .ok{
     display:none;text-align:center;padding:40px 30px;background:var(--sand);
   }
@@ -84,12 +85,12 @@
     <div class="head">
       <div class="eyebrow">парк-отель</div>
       <div class="logo">Таёжный</div>
-      <div class="subtitle">Регистрация на мероприятие · суббота</div>
+      <div class="subtitle">Регистрация на мероприятие · 13 июня, с 12:00</div>
     </div>
 
     <div class="body" id="formWrap">
       <label for="fio">ФИО</label>
-      <input type="text" id="fio" placeholder="Иван Иванов" autocomplete="name">
+      <input type="text" id="fio" placeholder="Иванов Иван Иванович" autocomplete="name">
 
       <label for="phone">Телефон</label>
       <input type="tel" id="phone" placeholder="+7 (___) ___-__-__" autocomplete="tel">
@@ -102,32 +103,55 @@
 
       <button id="submitBtn" onclick="submitForm()">🌿 Записаться</button>
       <div class="err" id="err"></div>
-      <p class="hint">Нажимая кнопку, вы соглашаетесь на обработку данных</p>
+      <p class="hint">Нажимая кнопку «Записаться», вы соглашаетесь на обработку
+      персональных данных в соответствии с Федеральным законом № 152-ФЗ
+      «О персональных данных».</p>
     </div>
 
     <div class="ok" id="okWrap">
       <div class="ic">✓</div>
       <h2>Вы записаны!</h2>
-      <p>Спасибо за заявку. Мы свяжемся с вами в Telegram.</p>
+      <p>Спасибо за заявку. Мы свяжемся с вами для подтверждения.</p>
     </div>
   </div>
 
 <script>
-  // ВСТАВЬТЕ СЮДА URL вашего Google Apps Script (см. инструкцию)
   const SHEET_URL = "https://script.google.com/macros/s/AKfycbw65gm8LiyJAlYXlyXdHnUMsT2KlMFt9LQJnSHQSVFs-_S5vNa3VOv31h1Od07lJzhisA/exec";
+
+  var phoneEl = document.getElementById('phone');
+
+  // При клике на пустое поле — подставляем "+7 ", курсор в конец.
+  // Если ввели только префикс — при уходе очищаем, чтобы снова показался пример.
+  phoneEl.addEventListener('focus', function(){
+    if(!phoneEl.value.trim()) phoneEl.value = '+7 ';
+    setTimeout(function(){ phoneEl.setSelectionRange(phoneEl.value.length, phoneEl.value.length); }, 0);
+  });
+  phoneEl.addEventListener('input', function(){
+    if(phoneEl.value && !phoneEl.value.startsWith('+7')) phoneEl.value = '+7 ';
+  });
+  phoneEl.addEventListener('blur', function(){
+    if(phoneEl.value.trim() === '+7' || phoneEl.value.trim() === '') phoneEl.value = '';
+  });
 
   function submitForm(){
     const fio = document.getElementById('fio').value.trim();
-    const phone = document.getElementById('phone').value.trim();
+    let phone = phoneEl.value.trim();
     const tg = document.getElementById('tg').value.trim();
     const qty = document.getElementById('qty').value.trim();
     const err = document.getElementById('err');
     const btn = document.getElementById('submitBtn');
 
+    if(phone === '+7' || phone === '+7 ') phone = '';
+
     err.style.display = 'none';
 
-    if(!fio || !phone){
-      err.textContent = 'Заполните, пожалуйста, ФИО и телефон.';
+    if(!fio){
+      err.textContent = 'Укажите, пожалуйста, ФИО.';
+      err.style.display = 'block';
+      return;
+    }
+    if(!phone && !tg){
+      err.textContent = 'Оставьте телефон или ник в Telegram для связи.';
       err.style.display = 'block';
       return;
     }
@@ -140,17 +164,22 @@
       ts: new Date().toLocaleString('ru-RU')
     });
 
-    fetch(SHEET_URL, { method:'POST', mode:'no-cors', body:data })
-      .then(() => {
-        document.getElementById('formWrap').style.display = 'none';
-        document.getElementById('okWrap').style.display = 'block';
-      })
-      .catch(() => {
-        err.textContent = 'Не удалось отправить. Попробуйте ещё раз.';
-        err.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = '🌿 Записаться';
-      });
+    fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: data.toString()
+    })
+    .then(() => {
+      document.getElementById('formWrap').style.display = 'none';
+      document.getElementById('okWrap').style.display = 'block';
+    })
+    .catch(() => {
+      err.textContent = 'Не удалось отправить. Проверьте интернет и попробуйте ещё раз.';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '🌿 Записаться';
+    });
   }
 </script>
 </body>
